@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Math 220 Arena
 
-## Getting Started
+Adaptive Linear Algebra training system for the Math 220 final. Red/black, keyboard-first, game-like.
 
-First, run the development server:
+## Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the URL the dev server prints (defaults to http://localhost:3000, falls back if occupied).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Modes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Survival** — 3 lives, difficulty climbs over time, time pressure
+- **Weakness Training** — adaptive engine prioritizes the topics where accuracy is lowest
+- **Speed Run** — 10 questions, scored on speed + accuracy
+- **Boss Battle** — pick one topic, 10 escalating problems
+- **Visualization** — drag matrix sliders, see live eigenvectors, det as transformed-square area, predict-then-reveal
 
-## Learn More
+## Topics covered
 
-To learn more about Next.js, take a look at the following resources:
+RREF / systems · linear independence + span · basis + dimension · eigenvalues + eigenvectors · orthogonality + projections · least squares · matrix operations + determinants
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture (greenfield, single-user)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+  page.tsx                  Home (mode tiles + stats summary)
+  play/[mode]/page.tsx      Game loop (5 modes share this screen)
+  viz/page.tsx              Visualization sandbox
+  boss/page.tsx             Topic picker for Boss Battle
+  stats/page.tsx            Performance dashboard + mistake log + cheat-sheet export
+  api/
+    question/   POST → adaptive next question
+    evaluate/   POST → grade + persist + XP
+    profile/    GET  → current profile
+    history/    GET  → mistake log
+lib/
+  topics.ts                 Topic metadata + Question type
+  generators/               One file per topic (procedural problem factories)
+  matrixMath.ts             RREF, eig, det, inv (mathjs wrappers)
+  grade.ts                  Order/parallel-aware answer comparison
+  scoring.ts                XP with confidence + speed + streak multipliers
+  srs.ts                    SM-2-lite spaced repetition
+  adaptive.ts               Topic + difficulty selection
+  profile.ts                Local JSON persistence (data/profile.json)
+components/
+  QuestionCard, AnswerInput, Timer, HUD, ConfidencePicker, Tex
+  viz/TransformCanvas       SVG grid + eigenvector overlay + det area
+data/                       profile.json + question-history.jsonl (created on first run)
+```
 
-## Deploy on Vercel
+## Adaptive engine highlights
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **SRS queue** — wrong answers resurface 3 → 7 → 21 questions later
+- **Interleaving guard** — never two consecutive questions from same topic (except Boss)
+- **Confidence calibration** — high-confidence wrongs cost extra XP, low-confidence ones cost less
+- **EMA mastery** — per-topic difficulty selection adapts every answer
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Smoke test
+
+```bash
+npx tsx scripts/smoke-generators.ts
+```
+
+Generates 30 problems × 7 topics × 3 difficulties (= 630), verifies each canonical answer self-grades.
+
+## Keyboard
+
+- `Enter` — submit / next
+- `1` / `2` / `3` — confidence sure / maybe / guess
+
+## Future hooks (not yet wired)
+
+- `lib/gemini.ts` placeholder for explanations on wrong answers (drop in `GEMINI_API_KEY` from LionPlanner)
+- `lib/pdfSeed.ts` for parsing `~/Downloads/Math220FinalReviewSp26.pdf` into the canonical question pool
