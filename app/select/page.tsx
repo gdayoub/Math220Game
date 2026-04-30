@@ -2,147 +2,199 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CHARACTERS, type Character, type CharacterId } from "@/lib/characters";
+import { motion } from "framer-motion";
+import { CHARACTERS, type Character } from "@/lib/characters";
 import { useClient } from "@/lib/clientStore";
-import { GlitchText } from "@/components/effects/GlitchText";
+import { Bean } from "@/components/ui/Bean";
+import { ChunkyButton } from "@/components/ui/ChunkyButton";
+import { ThemePicker } from "@/components/ui/ThemePicker";
 
 export default function SelectPage() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") ?? "/";
   const { selectedCharacter, setCharacter } = useClient();
-  const [hovered, setHovered] = useState<CharacterId | null>(null);
-  const [locking, setLocking] = useState<CharacterId | null>(null);
-  const focused = CHARACTERS.find((c) => c.id === (hovered ?? selectedCharacter)) ?? CHARACTERS[0];
+  const [locking, setLocking] = useState<string | null>(null);
 
   function lockIn(c: Character) {
     setLocking(c.id);
     setCharacter(c.id);
-    setTimeout(() => router.push(next), 900);
+    setTimeout(() => router.push(next), 600);
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="px-6 py-4 border-b border-[var(--color-border)] flex justify-between items-center">
-        <Link
-          href="/"
-          className="font-mono text-xs text-[var(--color-fg-dim)] hover:text-[var(--color-accent)] uppercase tracking-widest"
-        >
-          ← exit
+    <div
+      style={{
+        padding: "32px 40px 60px",
+        maxWidth: 1180,
+        margin: "0 auto",
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 28,
+          flexWrap: "wrap",
+          gap: 14,
+        }}
+      >
+        <Link href="/">
+          <ChunkyButton size="sm" color="var(--paper)">
+            ← Back
+          </ChunkyButton>
         </Link>
-        <GlitchText
-          as="h1"
-          className="font-mono text-lg tracking-[0.3em] text-[var(--color-accent)] text-glow"
+        <motion.h1
+          data-wordmark
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 800,
+            fontSize: 48,
+            color: "var(--accent-1)",
+            WebkitTextStroke: "3px var(--ink)",
+            textShadow: "0 6px 0 var(--ink)",
+            letterSpacing: "-0.01em",
+            lineHeight: 0.95,
+          }}
         >
-          SELECT OPERATOR
-        </GlitchText>
-        <span className="w-12" />
-      </header>
+          Pick your bean
+        </motion.h1>
+        <span style={{ width: 80 }} />
+      </div>
 
-      <main className="flex-1 px-6 py-10 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12 items-start">
-        {/* Roster grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {CHARACTERS.map((c, i) => {
-            const active = (hovered ?? selectedCharacter) === c.id;
-            const isLocked = locking === c.id;
-            return (
-              <motion.button
-                key={c.id}
-                onMouseEnter={() => setHovered(c.id)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => lockIn(c)}
-                disabled={!!locking}
-                className="text-left tile-in"
-                style={{ animationDelay: `${i * 60}ms` }}
-                whileTap={{ scale: 0.96 }}
-              >
-                <div
-                  className={`relative border p-5 transition-all duration-200 cursor-pointer ${
-                    active
-                      ? "border-[var(--color-accent)] glow-red-strong bg-[color:var(--color-accent)]/5"
-                      : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
-                  } ${isLocked ? "pulse-border" : ""}`}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 24,
+        }}
+      >
+        {CHARACTERS.map((c, i) => {
+          const isSelected = selectedCharacter === c.id;
+          const isLocking = locking === c.id;
+          return (
+            <motion.button
+              key={c.id}
+              type="button"
+              initial={{ y: 20, opacity: 0, scale: 0.92 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              transition={{
+                delay: 0.05 + i * 0.06,
+                type: "spring",
+                stiffness: 300,
+                damping: 15,
+              }}
+              whileHover={{ y: -6, rotate: i % 2 === 0 ? -2 : 2 }}
+              whileTap={{ y: 4, scale: 0.97 }}
+              onClick={() => lockIn(c)}
+              disabled={!!locking}
+              style={{
+                background: isSelected ? "var(--lemon)" : "var(--paper)",
+                border: "4px solid var(--ink)",
+                borderRadius: 28,
+                boxShadow: isLocking
+                  ? "0 4px 0 0 var(--ink)"
+                  : "0 8px 0 0 var(--ink)",
+                transform: isLocking ? "translateY(4px)" : undefined,
+                padding: 22,
+                cursor: locking ? "wait" : "pointer",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 14,
+                textAlign: "center",
+                font: "inherit",
+              }}
+              data-light-card
+            >
+              <Bean
+                color={c.color}
+                glyph={c.glyph}
+                glyphSize={c.glyph.length > 1 ? 22 : 36}
+                size={130}
+                eyeColor={c.eyeColor ?? "var(--ink)"}
+              />
+              <div data-on-paper style={{ marginTop: 14 }}>
+                <h3
                   style={{
-                    boxShadow: active
-                      ? `0 0 24px ${c.color}55, inset 0 0 40px ${c.color}10`
-                      : undefined,
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 800,
+                    fontSize: 22,
+                    color: "var(--ink)",
+                    letterSpacing: "0.02em",
                   }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <span
-                      className="text-4xl text-glow font-mono"
-                      style={{ color: c.color, textShadow: `0 0 16px ${c.color}` }}
-                    >
-                      {c.glyph}
-                    </span>
-                    <span className="font-mono text-[10px] tracking-widest text-[var(--color-fg-dim)]">
-                      {selectedCharacter === c.id ? "EQUIPPED" : "READY"}
-                    </span>
-                  </div>
-                  <div className="font-mono text-sm uppercase tracking-widest mb-1">{c.name}</div>
-                  <div className="text-xs text-[var(--color-fg-dim)]">{c.title}</div>
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
-
-        {/* Detail pane */}
-        <AnimatePresence mode="wait">
-          <motion.aside
-            key={focused.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.18 }}
-            className="border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-6 sticky top-6"
-            style={{
-              boxShadow: `inset 0 0 60px ${focused.color}10, 0 0 28px ${focused.color}30`,
-            }}
-          >
-            <div
-              className="text-7xl text-glow font-mono text-center mb-4"
-              style={{ color: focused.color, textShadow: `0 0 24px ${focused.color}` }}
-            >
-              {focused.glyph}
-            </div>
-            <div
-              className="text-center font-mono text-2xl tracking-[0.3em] mb-1"
-              style={{ color: focused.color }}
-            >
-              {focused.name}
-            </div>
-            <div className="text-center text-xs text-[var(--color-fg-dim)] uppercase tracking-widest mb-6">
-              {focused.title}
-            </div>
-            <p className="text-sm text-[var(--color-fg)] mb-6 italic">"{focused.tagline}"</p>
-            <div className="border-t border-[var(--color-border)] pt-4">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-fg-dim)] mb-2">
-                Passive
+                  {c.name}
+                </h3>
+                <p
+                  data-on-paper-soft
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 800,
+                    fontSize: 11,
+                    color: "var(--ink-soft)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginTop: 2,
+                  }}
+                >
+                  {c.title}
+                </p>
               </div>
-              <div
-                className="font-mono text-sm leading-relaxed"
-                style={{ color: focused.color }}
+              <p
+                data-on-paper-soft
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: "var(--ink-soft)",
+                  lineHeight: 1.3,
+                  maxWidth: 240,
+                }}
               >
-                ▸ {focused.passive}
-              </div>
-            </div>
-            <button
-              onClick={() => lockIn(focused)}
-              disabled={!!locking}
-              className="mt-6 w-full font-mono uppercase tracking-[0.3em] py-3 border-2 transition-all"
-              style={{
-                color: focused.color,
-                borderColor: focused.color,
-                boxShadow: `0 0 16px ${focused.color}55`,
-              }}
-            >
-              {locking === focused.id ? "▸ LOCKING IN…" : "▸ LOCK IN"}
-            </button>
-          </motion.aside>
-        </AnimatePresence>
-      </main>
+                {c.passive}
+              </p>
+              <p
+                data-on-paper-soft
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  color: "var(--ink-faint)",
+                  fontStyle: "italic",
+                }}
+              >
+                &ldquo;{c.tagline}&rdquo;
+              </p>
+              {(isSelected || isLocking) && (
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 800,
+                    fontSize: 11,
+                    color: "var(--ink)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    background: "var(--mint)",
+                    border: "3px solid var(--ink)",
+                    borderRadius: 999,
+                    padding: "4px 12px",
+                    boxShadow: "0 3px 0 0 var(--ink)",
+                  }}
+                >
+                  {isLocking ? "Locking in…" : "Equipped ✓"}
+                </span>
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+      <ThemePicker />
     </div>
   );
 }

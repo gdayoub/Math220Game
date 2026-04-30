@@ -5,35 +5,55 @@ import { motion } from "framer-motion";
 import type { Profile } from "@/lib/profile";
 import { useClient } from "@/lib/clientStore";
 import { getCharacter } from "@/lib/characters";
-import { BootGate } from "@/components/effects/BootSequence";
-import { GlitchText } from "@/components/effects/GlitchText";
-import { TiltCard } from "@/components/effects/TiltCard";
-import { AnimatedCounter } from "@/components/effects/AnimatedCounter";
+import { BootGate } from "@/components/effects/BootSplash";
+import { Bean } from "@/components/ui/Bean";
+import { Pill } from "@/components/ui/Pill";
+import { Stat } from "@/components/ui/Stat";
+import { ChunkyButton } from "@/components/ui/ChunkyButton";
+import { ThemePicker } from "@/components/ui/ThemePicker";
 
-const MODES = [
+type Mode = {
+  slug: string;
+  title: string;
+  glyph: string;
+  tagline: string;
+  color: string;
+  textColor: string;
+  href?: string;
+};
+
+const MODES: Mode[] = [
   {
     slug: "survival",
     title: "Survival",
     glyph: "⚔",
     tagline: "Three lives. Difficulty climbs. Don't blink.",
+    color: "var(--pink)",
+    textColor: "var(--ink)",
   },
   {
     slug: "weakness",
     title: "Weakness Training",
     glyph: "◎",
-    tagline: "The AI hunts your blind spots. Targeted practice.",
+    tagline: "AI hunts your blind spots.",
+    color: "var(--mint)",
+    textColor: "var(--ink)",
   },
   {
     slug: "speed",
     title: "Speed Run",
     glyph: "↯",
-    tagline: "Ten questions. Beat the clock. Rack the streak.",
+    tagline: "Ten questions. Beat the clock.",
+    color: "var(--lemon)",
+    textColor: "var(--ink)",
   },
   {
     slug: "boss",
     title: "Boss Battle",
     glyph: "▲",
-    tagline: "Pick a topic. Ten escalating problems. No mercy.",
+    tagline: "Pick a topic. Ten escalating problems.",
+    color: "var(--grape)",
+    textColor: "var(--on-dark-text)",
     href: "/boss",
   },
   {
@@ -41,7 +61,18 @@ const MODES = [
     title: "Visualization",
     glyph: "✶",
     tagline: "See transformations breathe. Predict before reveal.",
+    color: "var(--sky)",
+    textColor: "var(--ink)",
     href: "/viz",
+  },
+  {
+    slug: "stats",
+    title: "Performance",
+    glyph: "★",
+    tagline: "Mistake log + cheat-sheet export.",
+    color: "var(--peach)",
+    textColor: "var(--ink)",
+    href: "/stats",
   },
 ];
 
@@ -49,6 +80,7 @@ export default function HomePage() {
   return (
     <BootGate>
       <HomeBody />
+      <ThemePicker />
     </BootGate>
   );
 }
@@ -62,178 +94,366 @@ function HomeBody() {
     fetch("/api/profile").then((r) => r.json()).then(setProfile);
   }, []);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
-    >
-      <header className="px-8 py-6 border-b border-[var(--color-border)] flex justify-between items-end gap-6 flex-wrap">
-        <div>
-          <GlitchText
-            as="h1"
-            className="font-mono text-3xl tracking-[0.4em] text-[var(--color-accent)] text-glow"
-          >
-            MATH 220 // ARENA
-          </GlitchText>
-          <p className="text-[var(--color-fg-dim)] text-xs mt-1 font-mono uppercase tracking-widest">
-            Linear Algebra Adaptive Training System · v1.0
-          </p>
-        </div>
-        <div className="flex gap-3 items-center">
-          <Link
-            href="/stats"
-            className="font-mono text-xs uppercase tracking-widest text-[var(--color-fg-dim)] hover:text-[var(--color-accent)] transition-colors"
-          >
-            performance →
-          </Link>
-        </div>
-      </header>
+  const accuracy =
+    profile && profile.totalQuestions > 0
+      ? Math.round((profile.totalCorrect / profile.totalQuestions) * 100)
+      : 0;
 
-      {/* Operator strip */}
-      <section className="px-8 py-4 border-b border-[var(--color-border)] flex justify-between items-center gap-4 flex-wrap">
-        <Link
-          href="/select?next=/"
-          className="group flex items-center gap-4 cursor-pointer"
-        >
-          {character ? (
-            <>
+  return (
+    <div style={{ padding: "32px 40px 60px", maxWidth: 1180, margin: "0 auto", width: "100%" }}>
+      {/* Hero + operator strip */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 28,
+          flexWrap: "wrap",
+          gap: 24,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <motion.div
+            data-wordmark
+            initial={{ y: -30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 64,
+              lineHeight: 0.95,
+              color: "var(--accent-1)",
+              WebkitTextStroke: "4px var(--ink)",
+              textShadow: "0 7px 0 var(--ink)",
+              letterSpacing: "-0.02em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            MATH 220
+          </motion.div>
+          <div
+            data-arena
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 24,
+              color: "var(--accent-2)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            ARENA
+          </div>
+        </div>
+
+        <Link href={`/select?next=${encodeURIComponent("/")}`} style={{ textDecoration: "none" }}>
+          <motion.div
+            data-light-card
+            whileHover={{ scale: 1.03, rotate: -1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              background: "var(--paper)",
+              border: "4px solid var(--ink)",
+              borderRadius: 28,
+              padding: "14px 22px 14px 14px",
+              boxShadow: "0 6px 0 0 var(--ink)",
+              cursor: "pointer",
+              minHeight: 96,
+            }}
+          >
+            {character ? (
+              <>
+                <span data-bean-on-paper>
+                  <Bean
+                    color={character.color}
+                    glyph={character.glyph}
+                    glyphSize={character.glyph.length > 1 ? 22 : 30}
+                    size={70}
+                    eyeColor={character.eyeColor ?? "var(--ink)"}
+                  />
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    lineHeight: 1.25,
+                    gap: 4,
+                    minWidth: 200,
+                  }}
+                >
+                  <span
+                    data-on-paper
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 800,
+                      fontSize: 18,
+                      color: "var(--ink)",
+                    }}
+                  >
+                    {character.name}
+                  </span>
+                  <span
+                    data-on-paper-soft
+                    style={{
+                      fontFamily: "var(--font-body)",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: "var(--ink-soft)",
+                      maxWidth: 240,
+                      lineHeight: 1.25,
+                    }}
+                  >
+                    {character.passive}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 800,
+                      fontSize: 11,
+                      color: "var(--accent-1)",
+                      textTransform: "uppercase",
+                      marginTop: 4,
+                    }}
+                  >
+                    tap to swap →
+                  </span>
+                </div>
+              </>
+            ) : (
               <div
-                className="w-12 h-12 border-2 flex items-center justify-center font-mono text-2xl group-hover:scale-110 transition-transform"
                 style={{
-                  color: character.color,
-                  borderColor: character.color,
-                  boxShadow: `0 0 16px ${character.color}55`,
-                  textShadow: `0 0 12px ${character.color}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  padding: "8px 4px",
                 }}
               >
-                {character.glyph}
-              </div>
-              <div>
-                <div
-                  className="font-mono text-sm tracking-widest"
-                  style={{ color: character.color }}
+                <span
+                  data-on-paper
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 800,
+                    fontSize: 22,
+                    color: "var(--ink)",
+                  }}
                 >
-                  {character.name}
-                </div>
-                <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-fg-dim)]">
-                  {character.passive}
-                </div>
+                  Pick your bean
+                </span>
+                <span
+                  data-on-paper-soft
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "var(--ink-soft)",
+                  }}
+                >
+                  Six operators · pick one to enter the arena
+                </span>
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-fg-dim)] ml-2 group-hover:text-[var(--color-accent)]">
-                [change]
-              </span>
-            </>
-          ) : (
-            <div className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent)] text-glow border border-[var(--color-accent)] px-4 py-2 group-hover:bg-[color:var(--color-accent)]/10 transition-colors">
-              ▸ SELECT OPERATOR
-            </div>
-          )}
+            )}
+          </motion.div>
         </Link>
+      </div>
 
-        <div className="flex flex-wrap gap-8 font-mono text-sm">
-          <Stat label="RANK" value={profile?.rank ?? "—"} accent />
-          <Stat label="XP" value={profile ? <AnimatedCounter value={profile.xp} /> : "—"} />
-          <Stat label="QUESTIONS" value={profile ? <AnimatedCounter value={profile.totalQuestions} /> : "—"} />
-          <Stat
-            label="ACCURACY"
-            value={
-              profile && profile.totalQuestions > 0
-                ? `${Math.round((profile.totalCorrect / profile.totalQuestions) * 100)}%`
-                : "—"
-            }
+      {/* Stats row */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 15 }}
+        style={{
+          display: "flex",
+          gap: 28,
+          padding: "14px 28px",
+          background: "var(--cream-deep)",
+          border: "4px solid var(--ink)",
+          borderRadius: 36,
+          boxShadow: "0 5px 0 0 var(--ink)",
+          marginBottom: 28,
+          flexWrap: "wrap",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <Stat label="Rank" value={profile?.rank ?? "—"} accent />
+        <Stat label="XP" value={profile ? profile.xp.toLocaleString() : "—"} />
+        <Stat
+          label="Questions"
+          value={profile ? profile.totalQuestions : "—"}
+        />
+        <Stat
+          label="Accuracy"
+          value={profile && profile.totalQuestions > 0 ? `${accuracy}%` : "—"}
+        />
+        <Stat
+          label="Best Streak"
+          value={profile ? `x${profile.bestStreak}` : "—"}
+        />
+      </motion.div>
+
+      {/* Mode tiles */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 20,
+        }}
+      >
+        {MODES.map((m, i) => (
+          <ModeTile
+            key={m.slug}
+            mode={m}
+            index={i}
+            hasCharacter={!!character}
           />
-          <Stat label="BEST STREAK" value={profile ? `x${profile.bestStreak}` : "—"} />
-        </div>
-      </section>
+        ))}
+      </div>
 
-      <main className="flex-1 px-8 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {MODES.map((m, i) => (
-            <ModeTile key={m.slug} {...m} index={i} hasCharacter={!!character} />
-          ))}
-        </div>
-        <p className="mt-10 text-xs text-[var(--color-fg-dim)] font-mono uppercase tracking-widest">
-          // [TAB] navigate · [ENTER] select · [ESC] exit any mode
-        </p>
-      </main>
-    </motion.div>
+      <p
+        style={{
+          marginTop: 28,
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 13,
+          color: "var(--ink-soft)",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        ✦ Tap a tile · [Enter] to start · [Esc] anytime
+      </p>
+
+      <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Link href="/settings">
+          <ChunkyButton size="sm" color="var(--paper)">
+            ⚙ Settings
+          </ChunkyButton>
+        </Link>
+        <Link href="/stats">
+          <ChunkyButton size="sm" color="var(--paper)">
+            ✕ Mistake Log
+          </ChunkyButton>
+        </Link>
+      </div>
+    </div>
   );
 }
 
 function ModeTile({
-  slug,
-  title,
-  glyph,
-  tagline,
-  href,
+  mode,
   index,
   hasCharacter,
 }: {
-  slug: string;
-  title: string;
-  glyph: string;
-  tagline: string;
-  href?: string;
+  mode: Mode;
   index: number;
   hasCharacter: boolean;
 }) {
-  const target = href ?? `/play/${slug}`;
-  // Force operator selection before entering a play mode (viz/boss menu always allowed)
-  const requiresChar = !href || href.startsWith("/play");
-  const finalHref = !hasCharacter && requiresChar
-    ? `/select?next=${encodeURIComponent(target)}`
-    : target;
+  const target = mode.href ?? `/play/${mode.slug}`;
+  const requiresChar = !mode.href || mode.href.startsWith("/play");
+  const finalHref =
+    !hasCharacter && requiresChar
+      ? `/select?next=${encodeURIComponent(target)}`
+      : target;
 
   return (
-    <Link href={finalHref}>
-      <TiltCard className="block tile-in" intensity={6}>
+    <Link href={finalHref} style={{ textDecoration: "none" }}>
+      <motion.div
+        initial={{ y: 20, opacity: 0, scale: 0.9 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        transition={{
+          delay: 0.15 + index * 0.06,
+          type: "spring",
+          stiffness: 300,
+          damping: 15,
+        }}
+        whileHover={{
+          y: -6,
+          rotate: index % 2 === 0 ? -2 : 2,
+          scale: 1.03,
+        }}
+        whileTap={{ y: 4, scale: 0.97, boxShadow: "0 3px 0 0 var(--ink)" }}
+        style={{
+          background: mode.color,
+          color: mode.textColor,
+          border: "4px solid var(--ink)",
+          borderRadius: 28,
+          boxShadow: "0 8px 0 0 var(--ink)",
+          padding: "22px 24px 24px",
+          cursor: "pointer",
+          position: "relative",
+          overflow: "hidden",
+          minHeight: 180,
+        }}
+      >
         <div
-          style={{ animationDelay: `${index * 80}ms` }}
-          className="group h-full border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:glow-red bg-[var(--color-bg-elevated)] p-6 transition-colors duration-150 cursor-pointer relative overflow-hidden"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 12,
+          }}
         >
-          <div className="flex items-start justify-between mb-4">
-            <span className="text-4xl text-[var(--color-accent)] text-glow group-hover:scale-110 transition-transform">
-              {glyph}
-            </span>
-            <span className="font-mono text-[10px] tracking-widest text-[var(--color-fg-dim)] group-hover:text-[var(--color-accent)] transition-colors">
-              READY
-            </span>
-          </div>
-          <GlitchText
-            as="h2"
-            className="font-mono text-lg uppercase tracking-widest mb-2 group-hover:text-[var(--color-accent)] transition-colors"
+          <motion.span
+            data-glyph-chip
+            animate={{ rotate: [-4, 4, -4] }}
+            transition={{
+              duration: 2.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: index * 0.2,
+            }}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 48,
+              background: "var(--paper)",
+              color: "var(--ink)",
+              border: "4px solid var(--ink)",
+              borderRadius: 18,
+              width: 76,
+              height: 76,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 0 0 var(--ink)",
+              lineHeight: 1,
+            }}
           >
-            {title}
-          </GlitchText>
-          <p className="text-sm text-[var(--color-fg-dim)] leading-relaxed">{tagline}</p>
-          {/* Corner brackets */}
-          <span className="absolute top-2 left-2 w-3 h-3 border-l border-t border-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-          <span className="absolute top-2 right-2 w-3 h-3 border-r border-t border-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-          <span className="absolute bottom-2 left-2 w-3 h-3 border-l border-b border-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-          <span className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
+            {mode.glyph}
+          </motion.span>
+          <Pill>READY</Pill>
         </div>
-      </TiltCard>
+        <h2
+          data-tile-text
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 800,
+            fontSize: 28,
+            color: mode.textColor,
+            marginBottom: 6,
+            lineHeight: 1.05,
+          }}
+        >
+          {mode.title}
+        </h2>
+        <p
+          data-tile-tagline
+          style={{
+            fontFamily: "var(--font-body)",
+            fontWeight: 700,
+            fontSize: 15,
+            color:
+              mode.textColor === "var(--on-dark-text)"
+                ? "#E5DAFF"
+                : "var(--ink-soft)",
+            lineHeight: 1.3,
+          }}
+        >
+          {mode.tagline}
+        </p>
+      </motion.div>
     </Link>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: React.ReactNode;
-  accent?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] tracking-widest text-[var(--color-fg-dim)]">{label}</span>
-      <span className={`text-xl font-mono ${accent ? "text-[var(--color-accent)] text-glow" : ""}`}>
-        {value}
-      </span>
-    </div>
   );
 }

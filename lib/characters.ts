@@ -1,6 +1,12 @@
 import type { Topic } from "./topics";
 
-export type CharacterId = "pivot" | "spectral" | "orthos" | "determinant" | "nullity" | "basis";
+export type CharacterId =
+  | "pivot"
+  | "spectral"
+  | "orthos"
+  | "determinant"
+  | "nullity"
+  | "basis";
 
 export type Character = {
   id: CharacterId;
@@ -9,17 +15,15 @@ export type Character = {
   title: string;
   tagline: string;
   passive: string;
-  /** XP multiplier per topic (1.0 = no bonus) */
   topicXpMultiplier?: Partial<Record<Topic, number>>;
-  /** Global XP multiplier (applied after topic multiplier) */
   globalXpMultiplier?: number;
-  /** Time multiplier per question (0.8 = 20% less time) */
   timeMultiplier?: number;
-  /** Bonus lives in Survival */
   bonusLives?: number;
-  /** SRS interval multiplier (lower = surfaces sooner) */
   srsIntervalMultiplier?: number;
+  /** Bean body color — references a CSS variable from the design palette. */
   color: string;
+  /** Eye color override — dark beans need cream eyes for contrast. */
+  eyeColor?: string;
 };
 
 export const CHARACTERS: Character[] = [
@@ -31,7 +35,7 @@ export const CHARACTERS: Character[] = [
     tagline: "Reduces fast. Pivots faster.",
     passive: "+20% XP on Systems / RREF",
     topicXpMultiplier: { rref: 1.2 },
-    color: "#22c55e",
+    color: "var(--mint)",
   },
   {
     id: "spectral",
@@ -41,7 +45,8 @@ export const CHARACTERS: Character[] = [
     tagline: "Sees through the matrix to its core.",
     passive: "+50% XP on Eigenvalue problems",
     topicXpMultiplier: { eigen: 1.5 },
-    color: "#a855f7",
+    color: "var(--grape)",
+    eyeColor: "var(--cream)",
   },
   {
     id: "orthos",
@@ -51,7 +56,7 @@ export const CHARACTERS: Character[] = [
     tagline: "Drops the orthogonal. Keeps the parallel.",
     passive: "+30% XP on Orthogonality & Least Squares",
     topicXpMultiplier: { orthogonality: 1.3, leastSquares: 1.3 },
-    color: "#3b82f6",
+    color: "var(--sky)",
   },
   {
     id: "determinant",
@@ -61,7 +66,8 @@ export const CHARACTERS: Character[] = [
     tagline: "Steady. Reliable. One extra life.",
     passive: "+1 life in Survival mode",
     bonusLives: 1,
-    color: "#f59e0b",
+    color: "var(--ink)",
+    eyeColor: "var(--cream)",
   },
   {
     id: "nullity",
@@ -72,7 +78,7 @@ export const CHARACTERS: Character[] = [
     passive: "−20% time per question · +100% XP",
     timeMultiplier: 0.8,
     globalXpMultiplier: 2.0,
-    color: "#ef4444",
+    color: "var(--pink)",
   },
   {
     id: "basis",
@@ -82,11 +88,13 @@ export const CHARACTERS: Character[] = [
     tagline: "SRS reviews surface twice as often.",
     passive: "Spaced-repetition queue runs 2× faster",
     srsIntervalMultiplier: 0.5,
-    color: "#06b6d4",
+    color: "var(--peach)",
   },
 ];
 
-export function getCharacter(id: CharacterId | null | undefined): Character | null {
+export function getCharacter(
+  id: CharacterId | null | undefined,
+): Character | null {
   if (!id) return null;
   return CHARACTERS.find((c) => c.id === id) ?? null;
 }

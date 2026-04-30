@@ -1,4 +1,5 @@
 "use client";
+import { motion } from "framer-motion";
 import type { Confidence } from "@/lib/topics";
 
 type Props = {
@@ -7,32 +8,58 @@ type Props = {
 };
 
 const OPTIONS: Array<{ value: Confidence; label: string; color: string }> = [
-  { value: "sure", label: "SURE", color: "var(--color-success)" },
-  { value: "maybe", label: "MAYBE", color: "var(--color-warning)" },
-  { value: "guess", label: "GUESS", color: "var(--color-accent)" },
+  { value: "sure", label: "SURE", color: "var(--mint)" },
+  { value: "maybe", label: "MAYBE", color: "var(--lemon)" },
+  { value: "guess", label: "GUESS", color: "var(--pink)" },
 ];
 
 export function ConfidencePicker({ value, onChange }: Props) {
   return (
-    <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-widest">
-      <span className="text-[var(--color-fg-dim)]">Confidence</span>
-      <div className="flex">
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 800,
+          fontSize: 12,
+          color: "var(--ink-soft)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}
+      >
+        Confidence
+      </span>
+      <div
+        style={{
+          display: "flex",
+          border: "3px solid var(--ink)",
+          borderRadius: 999,
+          overflow: "hidden",
+          boxShadow: "0 4px 0 0 var(--ink)",
+          background: "var(--paper)",
+        }}
+      >
         {OPTIONS.map((opt) => {
           const active = value === opt.value;
           return (
-            <button
+            <motion.button
               key={opt.value}
               type="button"
+              whileTap={{ scale: 0.94 }}
               onClick={() => onChange(opt.value)}
-              className={`px-3 py-1 border ${
-                active
-                  ? "border-[color:var(--color-accent)] bg-[color:var(--color-accent)]/10 text-[color:var(--color-accent)]"
-                  : "border-[var(--color-border)] text-[var(--color-fg-dim)] hover:text-[var(--color-fg)]"
-              } transition-colors`}
-              style={active ? { borderColor: opt.color, color: opt.color } : undefined}
+              style={{
+                border: 0,
+                padding: "8px 18px",
+                cursor: "pointer",
+                background: active ? opt.color : "transparent",
+                color: "var(--ink)",
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 13,
+                letterSpacing: "0.04em",
+              }}
             >
               {opt.label}
-            </button>
+            </motion.button>
           );
         })}
       </div>

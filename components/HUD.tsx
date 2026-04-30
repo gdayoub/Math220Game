@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { AnimatedCounter } from "./effects/AnimatedCounter";
+import { motion } from "framer-motion";
+import { Stat } from "./ui/Stat";
+import { Heart } from "./ui/Heart";
 
 type Props = {
   xp: number;
@@ -15,83 +16,132 @@ type Props = {
 };
 
 export function HUD({
-  xp, rank, streak, lives, maxLives, questionIndex, totalQuestions,
-  characterGlyph, characterColor,
+  xp,
+  rank,
+  streak,
+  lives,
+  maxLives,
+  questionIndex,
+  totalQuestions,
+  characterGlyph,
+  characterColor,
 }: Props) {
-  const [pop, setPop] = useState(false);
-  const prevRef = useRef(streak);
-  useEffect(() => {
-    if (streak > prevRef.current) {
-      setPop(true);
-      const t = setTimeout(() => setPop(false), 450);
-      return () => clearTimeout(t);
-    }
-    prevRef.current = streak;
-  }, [streak]);
-
   return (
-    <div className="flex items-center justify-between gap-6 border-b border-[var(--color-border)] px-6 py-3 font-mono text-xs uppercase tracking-widest">
-      <div className="flex items-center gap-6">
+    <motion.div
+      initial={{ y: -40, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 15 }}
+      data-light-card
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 18,
+        background: "var(--paper)",
+        border: "4px solid var(--ink)",
+        borderRadius: 999,
+        boxShadow: "0 6px 0 0 var(--ink)",
+        padding: "10px 22px",
+        flexWrap: "wrap",
+        rowGap: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 18,
+          flexWrap: "wrap",
+          rowGap: 8,
+        }}
+      >
         {characterGlyph && (
-          <span
-            className="text-2xl"
-            style={{ color: characterColor, textShadow: `0 0 10px ${characterColor}` }}
+          <motion.div
+            animate={{ rotate: [-3, 3, -3] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              width: 40,
+              height: 40,
+              background: characterColor,
+              border: "3px solid var(--ink)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: characterGlyph.length > 1 ? 13 : 18,
+              color: "var(--ink)",
+              boxShadow: "0 3px 0 0 var(--ink)",
+            }}
           >
             {characterGlyph}
-          </span>
+          </motion.div>
         )}
-        <Stat label="Rank" value={rank} accent />
-        <Stat label="XP" value={<AnimatedCounter value={xp} />} />
-        <div className="flex gap-2 items-baseline">
-          <span className="text-[var(--color-fg-dim)]">Streak</span>
+        <span data-on-paper>
+          <Stat label="Rank" value={rank} accent />
+        </span>
+        <span data-on-paper>
+          <Stat label="XP" value={xp.toLocaleString()} />
+        </span>
+        <motion.div
+          animate={streak >= 3 ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 0.6, repeat: Infinity }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: streak >= 3 ? "var(--lemon)" : "var(--cream-deep)",
+            border: "3px solid var(--ink)",
+            borderRadius: 999,
+            padding: "4px 14px",
+            boxShadow: "0 3px 0 0 var(--ink)",
+          }}
+        >
           <span
-            className={`inline-block ${streak >= 3 ? "text-[var(--color-accent)] text-glow" : ""} ${pop ? "combo-pop" : ""}`}
-            style={{ fontSize: streak >= 5 ? "1.4em" : streak >= 3 ? "1.15em" : undefined }}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 11,
+              color: "var(--ink-soft)",
+              textTransform: "uppercase",
+            }}
+          >
+            Streak
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 18,
+              color: "var(--ink)",
+            }}
           >
             x{streak}
           </span>
-        </div>
+        </motion.div>
       </div>
-      <div className="flex gap-6 items-center">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 18,
+          flexWrap: "nowrap",
+        }}
+      >
         {typeof questionIndex === "number" && typeof totalQuestions === "number" && (
-          <Stat label="Q" value={`${questionIndex + 1}/${totalQuestions}`} />
+          <span data-on-paper>
+            <Stat label="Q" value={`${questionIndex + 1} / ${totalQuestions}`} />
+          </span>
         )}
         {typeof lives === "number" && typeof maxLives === "number" && (
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--color-fg-dim)]">LIVES</span>
-            <div className="flex gap-1">
-              {Array.from({ length: maxLives }).map((_, i) => (
-                <span
-                  key={i}
-                  className={`inline-block h-4 w-4 transition-all ${
-                    i < lives
-                      ? "bg-[var(--color-accent)] glow-red"
-                      : "border border-[var(--color-border)]"
-                  }`}
-                  style={i < lives ? { transform: "rotate(45deg)" } : undefined}
-                />
-              ))}
-            </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {Array.from({ length: maxLives }).map((_, i) => (
+              <Heart key={i} filled={i < lives} />
+            ))}
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: React.ReactNode;
-  accent?: boolean;
-}) {
-  return (
-    <div className="flex gap-2 items-baseline">
-      <span className="text-[var(--color-fg-dim)]">{label}</span>
-      <span className={accent ? "text-[var(--color-accent)] text-glow" : ""}>{value}</span>
-    </div>
+    </motion.div>
   );
 }

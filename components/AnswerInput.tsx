@@ -1,11 +1,27 @@
 "use client";
 import { forwardRef, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import type { Question } from "@/lib/topics";
 
 type Props = {
   question: Question;
   disabled?: boolean;
   onChange: (value: unknown) => void;
+};
+
+const inputBaseStyle: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  fontFamily: "var(--font-body)",
+  fontWeight: 700,
+  fontSize: 20,
+  padding: "16px 20px",
+  border: "4px solid var(--ink)",
+  borderRadius: 20,
+  boxShadow: "0 4px 0 0 var(--ink)",
+  background: "var(--paper)",
+  color: "var(--ink)",
+  outline: "none",
 };
 
 export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerInput(
@@ -22,6 +38,15 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
     setMc(null);
   }, [question.id]);
 
+  function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
+    e.currentTarget.style.borderColor = "var(--grape)";
+    e.currentTarget.style.boxShadow = "0 4px 0 0 var(--grape-deep)";
+  }
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    e.currentTarget.style.borderColor = "var(--ink)";
+    e.currentTarget.style.boxShadow = "0 4px 0 0 var(--ink)";
+  }
+
   switch (question.inputType) {
     case "scalar":
       return (
@@ -34,8 +59,10 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
             setScalar(e.target.value);
             onChange(e.target.value);
           }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder="enter number or fraction (e.g. 3 or -1/2)"
-          className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] focus:border-[var(--color-accent)] px-3 py-2 font-mono text-lg"
+          style={inputBaseStyle}
         />
       );
     case "vector":
@@ -49,62 +76,113 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
             setVector(e.target.value);
             onChange(e.target.value);
           }}
-          placeholder="comma or space separated (e.g. 1, -2, 3)"
-          className="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] focus:border-[var(--color-accent)] px-3 py-2 font-mono text-lg"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder="comma separated (e.g. 1, -2, 3)"
+          style={inputBaseStyle}
         />
       );
     case "multiple-choice":
       return (
-        <div className="grid grid-cols-1 gap-2">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 10,
+          }}
+        >
           {(question.choices ?? []).map((choice, i) => {
             const active = mc === choice;
             return (
-              <button
+              <motion.button
                 key={i}
+                type="button"
                 disabled={disabled}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => {
                   setMc(choice);
                   onChange(choice);
                 }}
-                className={`text-left px-4 py-2 border font-mono ${
-                  active
-                    ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[color:var(--color-accent)]/10"
-                    : "border-[var(--color-border)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
-                } transition-colors`}
+                style={{
+                  textAlign: "left",
+                  padding: "14px 18px",
+                  border: "4px solid var(--ink)",
+                  borderRadius: 18,
+                  boxShadow: active
+                    ? "0 3px 0 0 var(--ink)"
+                    : "0 5px 0 0 var(--ink)",
+                  transform: active ? "translateY(2px)" : undefined,
+                  background: active ? "var(--lemon)" : "var(--paper)",
+                  color: "var(--ink)",
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 700,
+                  fontSize: 17,
+                  cursor: disabled ? "not-allowed" : "pointer",
+                }}
               >
-                <span className="text-[var(--color-fg-dim)] mr-3">{String.fromCharCode(65 + i)}.</span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 800,
+                    color: "var(--ink-soft)",
+                    marginRight: 12,
+                  }}
+                >
+                  {String.fromCharCode(65 + i)}.
+                </span>
                 {choice}
-              </button>
+              </motion.button>
             );
           })}
         </div>
       );
     case "boolean":
       return (
-        <div className="flex gap-3">
+        <div style={{ display: "flex", gap: 12 }}>
           {["true", "false"].map((opt) => {
             const active = mc === opt;
             return (
-              <button
+              <motion.button
                 key={opt}
+                type="button"
                 disabled={disabled}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setMc(opt);
                   onChange(opt === "true");
                 }}
-                className={`px-6 py-2 border font-mono uppercase ${
-                  active
-                    ? "border-[var(--color-accent)] text-[var(--color-accent)]"
-                    : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
-                }`}
+                style={{
+                  flex: 1,
+                  padding: "14px 18px",
+                  border: "4px solid var(--ink)",
+                  borderRadius: 999,
+                  boxShadow: active
+                    ? "0 3px 0 0 var(--ink)"
+                    : "0 5px 0 0 var(--ink)",
+                  transform: active ? "translateY(2px)" : undefined,
+                  background: active
+                    ? opt === "true"
+                      ? "var(--mint)"
+                      : "var(--pink)"
+                    : "var(--paper)",
+                  color: "var(--ink)",
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 800,
+                  fontSize: 17,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                }}
               >
                 {opt}
-              </button>
+              </motion.button>
             );
           })}
         </div>
       );
     default:
-      return <div className="text-[var(--color-fg-dim)]">Unsupported input type</div>;
+      return (
+        <div style={{ color: "var(--ink-soft)" }}>Unsupported input type</div>
+      );
   }
 });
