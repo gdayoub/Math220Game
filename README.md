@@ -10,6 +10,24 @@ npm run dev
 
 Open the URL the dev server prints (defaults to http://localhost:3000, falls back if occupied).
 
+## Deploy to Vercel (free tier)
+
+Each visitor gets an anonymous, isolated profile via an httpOnly cookie — no
+login screen. Local development still uses `data/` JSON files; production
+flips automatically to Upstash Redis based on env vars.
+
+1. **Push the repo** to GitHub (already on `gdayoub/Math220Game`).
+2. **Import on Vercel**: vercel.com/new → pick the GitHub repo → defaults are fine.
+3. **Add Upstash Redis** (free): Vercel project → Storage → Create Database
+   → "Upstash for Redis" marketplace integration → Connect to project. Vercel
+   injects `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
+4. **Redeploy** (Vercel will auto-redeploy after the integration links).
+   Visit the URL — boot splash → home. Each browser/device = its own profile.
+
+Cost: $0/mo on Vercel Hobby + Upstash free tier (256 MB storage, 500 k
+commands/month). Rate-limited to 30 req / 10 sec per user on the write
+endpoints to stay safely under the 1 M function-invocation cap.
+
 ## Modes
 
 - **Survival** — 3 lives, difficulty climbs over time, time pressure

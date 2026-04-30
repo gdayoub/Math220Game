@@ -372,7 +372,7 @@ export default function ReviewTopic({
                       lineHeight: 1.45,
                     }}
                   >
-                    ↳ {m.commonMistake}
+                    ↳ <Tex>{m.commonMistake}</Tex>
                   </p>
                 </div>
               ))}

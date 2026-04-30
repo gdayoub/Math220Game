@@ -1,5 +1,5 @@
 "use client";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,6 +38,14 @@ export default function PlayPage({
 }: {
   params: Promise<{ mode: string }>;
 }) {
+  return (
+    <Suspense fallback={null}>
+      <PlayInner params={params} />
+    </Suspense>
+  );
+}
+
+function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
   const { mode: modeParam } = use(params);
   const mode = modeParam as Mode;
   const search = useSearchParams();

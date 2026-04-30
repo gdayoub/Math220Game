@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { rankFor, recordResult } from "@/lib/profile";
 import {
   appendHistory,
-  readProfile,
-  recordResult,
-  rankFor,
-  writeProfile,
-} from "@/lib/profile";
+  getProfile,
+  getRateLimiter,
+  saveProfile,
+} from "@/lib/store";
+import { getUid } from "@/lib/uid";
 import { computeXp } from "@/lib/scoring";
 import { gradeAnswer } from "@/lib/grade";
 import { generateQuestion } from "@/lib/generators";
@@ -30,12 +31,12 @@ function yesterdayStr(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function GET() {
-  const profile = await readProfile();
+export async function GET(req: Request) {
+  const uid = getUid(req);
+  const profile = await getProfile(uid);
   const today = todayStr();
 
   if (profile.dailyChallenge.date !== today || !profile.dailyChallenge.question) {
-    // Reset streak if the player skipped a day
     if (
       profile.dailyChallenge.lastDate &&
       profile.dailyChallenge.lastDate !== yesterdayStr() &&
@@ -54,7 +55,7 @@ export async function GET() {
       question,
       completed: 0,
     };
-    await writeProfile(profile);
+    await saveProfile(uid, profile);
   }
 
   return Response.json({
@@ -75,8 +76,17 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const uid = getUid(req);
+  const limiter = getRateLimiter();
+  if (limiter) {
+    const { success } = await limiter.limit(`d:${uid}`);
+    if (!success) {
+      return Response.json({ error: "rate limited" }, { status: 429 });
+    }
+  }
+
   const body = Body.parse(await req.json());
-  const profile = await readProfile();
+  const profile = await getProfile(uid);
   const today = todayStr();
   const question = profile.dailyChallenge.question;
 
@@ -107,7 +117,6 @@ export async function POST(req: Request) {
     topic: question.topic,
     character,
   });
-  // Daily bonus on top of regular XP for a correct first-try answer
   const dailyBonus = correct ? 50 : 0;
   const totalXp = xpDelta + dailyBonus;
 
@@ -124,8 +133,8 @@ export async function POST(req: Request) {
     profile.dailyChallenge.lastDate = today;
   }
 
-  await writeProfile(profile);
-  await appendHistory({
+  await saveProfile(uid, profile);
+  await appendHistory(uid, {
     ts: Date.now(),
     questionId: question.id,
     topic: question.topic,

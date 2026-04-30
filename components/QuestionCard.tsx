@@ -164,7 +164,7 @@ export function QuestionCard({ question, feedback, showSolution }: Props) {
             >
               Watch out:
             </span>
-            {question.commonMistake}
+            <Tex>{question.commonMistake}</Tex>
           </div>
         </div>
       )}

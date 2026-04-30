@@ -1,12 +1,16 @@
 import { z } from "zod";
 import {
-  appendHistory,
-  readProfile,
-  recordResult,
   rankFor,
-  writeProfile,
+  recordResult,
   type Profile,
 } from "@/lib/profile";
+import {
+  appendHistory,
+  getProfile,
+  getRateLimiter,
+  saveProfile,
+} from "@/lib/store";
+import { getUid } from "@/lib/uid";
 import { computeXp } from "@/lib/scoring";
 import { gradeAnswer } from "@/lib/grade";
 import { scheduleAfterAnswer, popDue } from "@/lib/srs";
@@ -26,13 +30,21 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const uid = getUid(req);
+  const limiter = getRateLimiter();
+  if (limiter) {
+    const { success } = await limiter.limit(`e:${uid}`);
+    if (!success) {
+      return Response.json({ error: "rate limited" }, { status: 429 });
+    }
+  }
+
   const body = Body.parse(await req.json());
   const q = body.question as Question;
-  const profile: Profile = await readProfile();
+  const profile: Profile = await getProfile(uid);
 
   const correct = gradeAnswer(q, body.userAnswer);
 
-  // SRS prior — pop and reschedule
   const prior = popDue(profile);
   scheduleAfterAnswer({
     profile,
@@ -63,8 +75,8 @@ export async function POST(req: Request) {
     if (newStreak > profile.bestStreak) profile.bestStreak = newStreak;
   }
 
-  await writeProfile(profile);
-  await appendHistory({
+  await saveProfile(uid, profile);
+  await appendHistory(uid, {
     ts: Date.now(),
     questionId: q.id,
     topic: q.topic,

@@ -378,7 +378,7 @@ export default function StatsPage() {
                       >
                         Watch out:
                       </span>
-                      {h.commonMistake}
+                      <Tex>{h.commonMistake}</Tex>
                     </div>
                   </motion.div>
                 );

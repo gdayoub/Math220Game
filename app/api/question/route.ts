@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { readProfile } from "@/lib/profile";
+import { getProfile, getRateLimiter } from "@/lib/store";
+import { getUid } from "@/lib/uid";
 import { pickNextTopic, pickDifficulty, type GameMode } from "@/lib/adaptive";
 import { generateQuestion } from "@/lib/generators";
 import { dueItem } from "@/lib/srs";
@@ -13,12 +14,20 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
-  const body = Body.parse(await req.json());
-  const profile = await readProfile();
+  const uid = getUid(req);
+  const limiter = getRateLimiter();
+  if (limiter) {
+    const { success } = await limiter.limit(`q:${uid}`);
+    if (!success) {
+      return Response.json({ error: "rate limited" }, { status: 429 });
+    }
+  }
 
-  // Honor SRS due items first (skip in boss/viz)
+  const body = Body.parse(await req.json());
+  const profile = await getProfile(uid);
+
   const due = body.mode !== "boss" && body.mode !== "viz" ? dueItem(profile) : null;
-  let topic = due
+  const topic = due
     ? due.topic
     : pickNextTopic({
         profile,
@@ -34,8 +43,5 @@ export async function POST(req: Request) {
   });
 
   const question = generateQuestion(topic, difficulty);
-  // Strip canonical answer + steps before sending — server keeps them.
-  // Actually we DO need answer+steps client-side for instant grading & post-answer reveal,
-  // since this is single-user local. Keep them.
   return Response.json({ question, srsHit: !!due });
 }

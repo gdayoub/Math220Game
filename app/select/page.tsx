@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { motion } from "framer-motion";
 import { CHARACTERS, type Character } from "@/lib/characters";
 import { useClient } from "@/lib/clientStore";
@@ -10,6 +10,14 @@ import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { ThemePicker } from "@/components/ui/ThemePicker";
 
 export default function SelectPage() {
+  return (
+    <Suspense fallback={null}>
+      <SelectInner />
+    </Suspense>
+  );
+}
+
+function SelectInner() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") ?? "/";
