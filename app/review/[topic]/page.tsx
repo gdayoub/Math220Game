@@ -119,6 +119,7 @@ export default function ReviewTopic({
               fontSize: 17,
               color: "var(--ink)",
               lineHeight: 1.55,
+              overflowWrap: "anywhere",
             }}
           >
             <Tex>{content.blurb}</Tex>
@@ -165,6 +166,8 @@ export default function ReviewTopic({
                 borderRadius: 18,
                 boxShadow: "0 5px 0 0 var(--ink)",
                 padding: "14px 18px",
+                minWidth: 0,
+                overflow: "hidden",
               }}
             >
               <div
@@ -177,6 +180,7 @@ export default function ReviewTopic({
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
                   marginBottom: 6,
+                  overflowWrap: "anywhere",
                 }}
               >
                 <Tex>{f.label}</Tex>
@@ -191,6 +195,8 @@ export default function ReviewTopic({
                   lineHeight: 1.4,
                   textAlign: "center",
                   padding: "6px 4px",
+                  minWidth: 0,
+                  maxWidth: "100%",
                 }}
               >
                 <Tex>{`$$${f.body}$$`}</Tex>
@@ -252,10 +258,12 @@ export default function ReviewTopic({
               fontSize: 15,
               color: "var(--ink)",
               lineHeight: 1.55,
+              minWidth: 0,
+              overflowWrap: "anywhere",
             }}
           >
             {content.example.steps.map((s, i) => (
-              <li key={i}>
+              <li key={i} style={{ minWidth: 0, maxWidth: "100%" }}>
                 <Tex>{s}</Tex>
               </li>
             ))}
@@ -296,6 +304,7 @@ export default function ReviewTopic({
               fontSize: 16,
               color: "var(--ink)",
               lineHeight: 1.45,
+              overflowWrap: "anywhere",
             }}
           >
             <Tex>{content.pitfall}</Tex>
@@ -370,6 +379,7 @@ export default function ReviewTopic({
                       fontSize: 13,
                       color: "var(--ink-soft)",
                       lineHeight: 1.45,
+                      overflowWrap: "anywhere",
                     }}
                   >
                     ↳ <Tex>{m.commonMistake}</Tex>

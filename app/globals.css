@@ -320,8 +320,29 @@ body[data-theme="red"] ::selection { background: #FF1F3D; color: #FFFFFF; }
   color: #2B1B3D !important;
   font-weight: 700;
 }
-.katex { font-size: 1.05em; }
-.katex-display { margin: 0.5em 0 !important; }
+.katex { font-size: 1.05em; max-width: 100%; }
+
+/* Display-mode math (`$$…$$`) can be much wider than its container
+   (matrices, long fractions). Allow horizontal scroll inside the box
+   instead of overflowing the card. Containers must opt in with
+   `min-width: 0` so grid/flex items don't refuse to shrink. */
+.katex-display {
+  margin: 0.5em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 2px 0;
+}
+.katex-display > .katex {
+  display: inline-block;
+  text-align: initial;
+  white-space: nowrap;
+}
+
+/* Inline math nested in narrow flex/grid items */
+.katex-html {
+  white-space: nowrap;
+}
 
 /* Reusable chunky-card primitive */
 .card-chunky {
