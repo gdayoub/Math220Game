@@ -218,8 +218,8 @@ export default function SettingsPage() {
               marginTop: 6,
             }}
           >
-            Tip: keystrokes — [1/2/3] confidence, [Enter] submit/next, [Esc]
-            exit a run.
+            Tip: keystrokes — [Enter] submit/next, [Esc] exit a run. Tap the
+            confidence pill to set Sure / Maybe / Guess.
           </p>
         </section>
       </ScreenShell>

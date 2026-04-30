@@ -72,9 +72,7 @@ export default function DailyPage() {
       if (e.key === "Enter" && !feedback) {
         e.preventDefault();
         submit();
-      } else if (e.key === "1" && !feedback) setConfidence("sure");
-      else if (e.key === "2" && !feedback) setConfidence("maybe");
-      else if (e.key === "3" && !feedback) setConfidence("guess");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
