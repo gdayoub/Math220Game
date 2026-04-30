@@ -212,28 +212,6 @@ export function TransformMode({
             ✦ Compare your guess to the eigenvector lines and det readout above.
           </p>
         )}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            alignSelf: "flex-start",
-            background: "var(--cream-deep)",
-            border: "3px solid var(--ink)",
-            borderRadius: 999,
-            boxShadow: "0 3px 0 0 var(--ink)",
-            padding: "6px 12px",
-            fontFamily: "var(--font-display)",
-            fontWeight: 800,
-            fontSize: 11,
-            color: "var(--ink)",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}
-        >
-          <span style={{ fontSize: 13 }}>✦</span>
-          Idea &amp; credit: Dr. Katz
-        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>

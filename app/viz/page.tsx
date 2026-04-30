@@ -237,12 +237,36 @@ function VizPageInner() {
       </div>
 
       {state.mode === "transform" && (
-        <TransformMode
-          matrix={state.matrix}
-          onMatrixChange={setMatrix}
-          reducedMotion={reducedMotion}
-          playSignal={playSignal}
-        />
+        <>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: "var(--lemon)",
+              border: "3px solid var(--ink)",
+              borderRadius: 999,
+              boxShadow: "0 4px 0 0 var(--ink)",
+              padding: "8px 16px",
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 12,
+              color: "var(--ink)",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              marginBottom: 18,
+            }}
+          >
+            <span style={{ fontSize: 14 }}>✦</span>
+            Idea &amp; credit: Dr. Katz
+          </div>
+          <TransformMode
+            matrix={state.matrix}
+            onMatrixChange={setMatrix}
+            reducedMotion={reducedMotion}
+            playSignal={playSignal}
+          />
+        </>
       )}
       {state.mode === "eigen" && (
         <EigenMode
