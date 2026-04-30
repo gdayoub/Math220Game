@@ -8,6 +8,8 @@ type Props = {
   glyphSize?: number;
   eyeColor?: string;
   hover?: boolean;
+  /** Character id — used by the red theme to pin a per-bean shade. */
+  characterId?: string;
 };
 
 export function Bean({
@@ -17,10 +19,12 @@ export function Bean({
   glyphSize,
   eyeColor = "var(--ink)",
   hover = false,
+  characterId,
 }: Props) {
   const finalGlyphSize = glyphSize ?? (glyph.length > 1 ? 22 : 36);
   return (
     <motion.div
+      data-character={characterId}
       animate={{ y: [0, -6, 0], rotate: [-1.5, 1.5, -1.5] }}
       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
       whileHover={hover ? { scale: 1.08, rotate: -4 } : undefined}

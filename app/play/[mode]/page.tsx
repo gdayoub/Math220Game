@@ -12,6 +12,9 @@ import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { Pill } from "@/components/ui/Pill";
 import { Confetti } from "@/components/ui/Confetti";
 import { ThemePicker } from "@/components/ui/ThemePicker";
+import { ReviewNudge } from "@/components/ui/ReviewNudge";
+import { PaperHint } from "@/components/ui/PaperHint";
+import type { Topic } from "@/lib/topics";
 import type { Question, Confidence } from "@/lib/topics";
 import type { Profile } from "@/lib/profile";
 import { useClient } from "@/lib/clientStore";
@@ -65,6 +68,9 @@ export default function PlayPage({
   const [gameOver, setGameOver] = useState<null | "won" | "lost">(null);
   const [loading, setLoading] = useState(false);
   const [confetti, setConfetti] = useState(false);
+  const [topicMissStreak, setTopicMissStreak] = useState<{ topic: Topic; count: number } | null>(null);
+  const [nudgeTopic, setNudgeTopic] = useState<Topic | null>(null);
+  const [nudgeDismissedFor, setNudgeDismissedFor] = useState<Topic | null>(null);
   const startTimeRef = useRef<number>(Date.now());
 
   useEffect(() => {
@@ -123,6 +129,8 @@ export default function PlayPage({
       setStreak((s) => s + 1);
       setConfetti(true);
       setTimeout(() => setConfetti(false), 2000);
+      // Reset same-topic miss streak on a correct answer
+      setTopicMissStreak(null);
     } else {
       setStreak(0);
       setShowSolution(true);
@@ -130,6 +138,15 @@ export default function PlayPage({
         const newLives = lives - 1;
         setLives(newLives);
         if (newLives <= 0) setGameOver("lost");
+      }
+      // Track consecutive misses on the same topic
+      const next =
+        topicMissStreak && topicMissStreak.topic === question.topic
+          ? { topic: question.topic, count: topicMissStreak.count + 1 }
+          : { topic: question.topic, count: 1 };
+      setTopicMissStreak(next);
+      if (next.count >= 3 && nudgeDismissedFor !== next.topic) {
+        setNudgeTopic(next.topic);
       }
     }
   }, [
@@ -141,6 +158,8 @@ export default function PlayPage({
     lives,
     cfg.lives,
     selectedCharacter,
+    topicMissStreak,
+    nudgeDismissedFor,
   ]);
 
   const advance = useCallback(() => {
@@ -282,6 +301,14 @@ export default function PlayPage({
         </div>
       )}
 
+      <ReviewNudge
+        topic={nudgeTopic}
+        onDismiss={() => {
+          if (nudgeTopic) setNudgeDismissedFor(nudgeTopic);
+          setNudgeTopic(null);
+        }}
+      />
+
       <main style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {loading || !question ? (
           <motion.div
@@ -327,18 +354,29 @@ export default function PlayPage({
                     Submit ⏎
                   </ChunkyButton>
                 </div>
-                <p
+                <div
                   style={{
-                    fontFamily: "var(--font-display)",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    color: "var(--ink-soft)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 12,
                   }}
                 >
-                  [1] sure · [2] maybe · [3] guess
-                </p>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: "var(--ink-soft)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    [1] sure · [2] maybe · [3] guess
+                  </p>
+                  <PaperHint show={question.difficulty === "hard"} />
+                </div>
               </>
             ) : (
               <FeedbackPanel

@@ -46,7 +46,7 @@ export const CHARACTERS: Character[] = [
     passive: "+50% XP on Eigenvalue problems",
     topicXpMultiplier: { eigen: 1.5 },
     color: "var(--grape)",
-    eyeColor: "var(--cream)",
+    eyeColor: "#FFF4E6",
   },
   {
     id: "orthos",
@@ -67,7 +67,7 @@ export const CHARACTERS: Character[] = [
     passive: "+1 life in Survival mode",
     bonusLives: 1,
     color: "var(--ink)",
-    eyeColor: "var(--cream)",
+    eyeColor: "#FFF4E6",
   },
   {
     id: "nullity",

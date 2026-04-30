@@ -67,6 +67,7 @@ export default function BossSelect() {
             return (
               <motion.button
                 key={t}
+                data-topic={t}
                 type="button"
                 whileHover={{ y: -4, rotate: i % 2 === 0 ? -2 : 2 }}
                 whileTap={{ y: 2, scale: 0.97 }}
@@ -178,6 +179,7 @@ export default function BossSelect() {
                     glyphSize={character.glyph.length > 1 ? 18 : 26}
                     size={56}
                     eyeColor={character.eyeColor ?? "var(--ink)"}
+                    characterId={character.id}
                   />
                 </span>
                 <div data-on-paper>

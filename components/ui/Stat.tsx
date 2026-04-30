@@ -35,6 +35,7 @@ export function Stat({ label, value, accent }: Props) {
       </span>
       <span
         data-stat-value
+        data-stat-accent={accent ? "" : undefined}
         style={{
           fontFamily: "var(--font-display)",
           fontWeight: 800,

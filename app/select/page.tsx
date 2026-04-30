@@ -118,6 +118,7 @@ export default function SelectPage() {
                 glyphSize={c.glyph.length > 1 ? 22 : 36}
                 size={130}
                 eyeColor={c.eyeColor ?? "var(--ink)"}
+                characterId={c.id}
               />
               <div data-on-paper style={{ marginTop: 14 }}>
                 <h3

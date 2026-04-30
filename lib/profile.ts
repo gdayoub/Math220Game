@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { Topic, Difficulty, Confidence } from "./topics";
+import type { Topic, Difficulty, Confidence, Question } from "./topics";
 import { ALL_TOPICS } from "./topics";
 
 export type TopicStats = {
@@ -44,7 +44,13 @@ export type Profile = {
   topics: Record<Topic, TopicStats>;
   srs: SrsItem[];
   recentTopics: Topic[]; // last 5
-  dailyChallenge: { date: string; completed: number; streak: number; lastDate: string };
+  dailyChallenge: {
+    date: string;
+    question: Question | null;
+    completed: number;
+    streak: number;
+    lastDate: string;
+  };
   createdAt: number;
   updatedAt: number;
 };
@@ -70,7 +76,7 @@ export function emptyProfile(): Profile {
     topics,
     srs: [],
     recentTopics: [],
-    dailyChallenge: { date: today, completed: 0, streak: 0, lastDate: "" },
+    dailyChallenge: { date: today, question: null, completed: 0, streak: 0, lastDate: "" },
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -87,6 +93,19 @@ export async function readProfile(): Promise<Profile> {
     // Backfill missing topics if schema evolves
     for (const t of ALL_TOPICS) {
       if (!parsed.topics[t]) parsed.topics[t] = emptyTopicStats();
+    }
+    // Backfill dailyChallenge schema for older profiles
+    if (!parsed.dailyChallenge) {
+      const today = new Date().toISOString().slice(0, 10);
+      parsed.dailyChallenge = {
+        date: today,
+        question: null,
+        completed: 0,
+        streak: 0,
+        lastDate: "",
+      };
+    } else if ((parsed.dailyChallenge as { question?: unknown }).question === undefined) {
+      parsed.dailyChallenge.question = null;
     }
     return parsed;
   } catch {

@@ -123,6 +123,22 @@ body[data-theme="red"] [data-light-card] {
 body[data-theme="red"] [data-light-card] [data-on-paper]      { color: #0A0303 !important; }
 body[data-theme="red"] [data-light-card] [data-on-paper-soft] { color: #5A2020 !important; }
 
+/* Inline-styled descendants of light cards have hardcoded var(--ink) /
+   var(--ink-soft) colors that resolve to white in red theme — force the
+   right contrast. */
+body[data-theme="red"] [data-light-card] [data-stat-value]                   { color: #0A0303 !important; }
+body[data-theme="red"] [data-light-card] [data-stat-value][data-stat-accent] { color: #FF1F3D !important; }
+body[data-theme="red"] [data-light-card] [data-stat-label]                   { color: #5A2020 !important; }
+
+/* Feedback flash overrides for red theme — the candy mint/pink pastels
+   stay too light for white text. Keep the success/error vibe but darker. */
+body[data-theme="red"] [data-feedback="correct"] {
+  background: #FFFFFF !important;
+}
+body[data-theme="red"] [data-feedback="wrong"] {
+  background: #FFE6EE !important;
+}
+
 /* Wordmark must be visible on near-black bg */
 body[data-theme="red"] [data-wordmark] {
   color: #FF1F3D !important;
@@ -131,8 +147,12 @@ body[data-theme="red"] [data-wordmark] {
 }
 body[data-theme="red"] [data-arena] { color: #FFFFFF !important; }
 
-/* Default pills get dark borders/shadows in red theme */
+/* Default pills (no explicit colored bg) collapse to white-on-white in red
+   because both --paper and --ink resolve to white. Force them light-on-dark
+   so labels like READY stay legible on red tiles. */
 body[data-theme="red"] [data-pill] {
+  background: #FFFFFF !important;
+  color: #0A0303 !important;
   border-color: #0A0303 !important;
   box-shadow: 0 3px 0 0 #0A0303 !important;
 }
@@ -147,12 +167,49 @@ body[data-theme="red"] [data-pill-on-dark] [data-pill] {
   background: #FF1F3D !important;
 }
 
-/* Glyph chips on tiles → black bg + white glyph for crisp legibility on red */
+/* Glyph chips on tiles → white bg + red glyph for crisp legibility on red.
+   White always pops against either bright-red or near-black tile surfaces. */
 body[data-theme="red"] [data-glyph-chip] {
-  background: #0A0303 !important;
-  color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #C00525 !important;
   border-color: #0A0303 !important;
-  box-shadow: 0 4px 0 0 #000000 !important;
+  box-shadow: 0 4px 0 0 #0A0303 !important;
+}
+
+/* ---------- Per-mode tile shades in red theme ----------
+   Vary the red-family hue by mode so the grid doesn't read as one slab. */
+body[data-theme="red"] [data-mode="survival"]   { background: #FF1F3D !important; }
+body[data-theme="red"] [data-mode="weakness"]   { background: #4A0E14 !important; }
+body[data-theme="red"] [data-mode="speed"]      { background: #C00525 !important; }
+body[data-theme="red"] [data-mode="boss"]       { background: #0A0303 !important; }
+body[data-theme="red"] [data-mode="viz"]        { background: #1A0606 !important; }
+body[data-theme="red"] [data-mode="stats"]      { background: #FF1F3D !important; border-color: #FFFFFF !important; }
+body[data-theme="red"] [data-mode="review"]     { background: #2A1010 !important; }
+
+/* Boss topic tiles — same staircase rhythm */
+body[data-theme="red"] [data-topic="rref"]          { background: #4A0E14 !important; }
+body[data-theme="red"] [data-topic="independence"]  { background: #1A0606 !important; }
+body[data-theme="red"] [data-topic="basis"]         { background: #C00525 !important; }
+body[data-theme="red"] [data-topic="eigen"]         { background: #0A0303 !important; }
+body[data-theme="red"] [data-topic="orthogonality"] { background: #FF1F3D !important; }
+body[data-theme="red"] [data-topic="leastSquares"]  { background: #770F1F !important; }
+body[data-theme="red"] [data-topic="matrixOps"]     { background: #4A0E14 !important; }
+
+/* Per-character bean body shades in red theme. The candy palette collapses
+   four characters onto identical #FF1F3D red — give each its own red-family
+   shade, and make sure dark beans (spectral/determinant) stay differentiated. */
+body[data-theme="red"] [data-character="pivot"]       { background: #FF1F3D !important; }
+body[data-theme="red"] [data-character="spectral"]    { background: #0A0303 !important; }
+body[data-theme="red"] [data-character="orthos"]      { background: #4A0E14 !important; }
+body[data-theme="red"] [data-character="determinant"] { background: #2A1010 !important; }
+body[data-theme="red"] [data-character="nullity"]     { background: #C00525 !important; }
+body[data-theme="red"] [data-character="basis"]       { background: #770F1F !important; }
+/* Bean inner glyph chip — always white in red theme so the chest emblem pops. */
+body[data-theme="red"] [data-character] [data-bean-glyph-chip] {
+  background: #FFFFFF !important;
+  color: #0A0303 !important;
+  border-color: #0A0303 !important;
+  box-shadow: 0 3px 0 0 #0A0303 !important;
 }
 
 /* Bean glyph chip stays light when bean sits on a light card */
@@ -254,12 +311,16 @@ body[data-theme="red"] ::selection { background: #FF1F3D; color: #FFFFFF; }
   border: 2px solid var(--cream-deep);
 }
 
-/* KaTeX overrides — math text inherits theme color */
-.katex {
-  color: var(--ink) !important;
-  font-size: 1.05em;
+/* KaTeX overrides — math is ALWAYS rendered on a light card surface in this
+   app (question prompts, solution steps, mistake log), so pin every KaTeX
+   descendant to a fixed dark ink in both themes. The hard-coded color also
+   beats KaTeX's own inline color attributes on nested .mord/.mfrac spans. */
+.katex,
+.katex * {
+  color: #2B1B3D !important;
   font-weight: 700;
 }
+.katex { font-size: 1.05em; }
 .katex-display { margin: 0.5em 0 !important; }
 
 /* Reusable chunky-card primitive */

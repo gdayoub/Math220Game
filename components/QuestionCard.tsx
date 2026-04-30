@@ -4,6 +4,7 @@ import type { Question } from "@/lib/topics";
 import { TOPIC_META } from "@/lib/topics";
 import { Tex } from "./Tex";
 import { Pill } from "./ui/Pill";
+import { ConceptTooltip } from "./ui/ConceptTooltip";
 
 type Props = {
   question: Question;
@@ -38,6 +39,7 @@ export function QuestionCard({ question, feedback, showSolution }: Props) {
       animate={{ y: 0, opacity: 1, rotate: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 15 }}
       data-light-card
+      data-feedback={feedback ? (feedback.correct ? "correct" : "wrong") : undefined}
       style={{
         background: bg,
         border: "4px solid var(--ink)",
@@ -57,14 +59,16 @@ export function QuestionCard({ question, feedback, showSolution }: Props) {
           gap: 10,
         }}
       >
-        <span data-pill-on-dark={isDarkChip ? "" : undefined}>
-          <Pill
-            color={topicColor}
-            textColor={isDarkChip ? "var(--cream)" : "var(--ink)"}
-          >
-            {meta.short}
-          </Pill>
-        </span>
+        <ConceptTooltip topic={question.topic}>
+          <span data-pill-on-dark={isDarkChip ? "" : undefined}>
+            <Pill
+              color={topicColor}
+              textColor={isDarkChip ? "var(--cream)" : "var(--ink)"}
+            >
+              {meta.short} ⓘ
+            </Pill>
+          </span>
+        </ConceptTooltip>
         <span
           data-on-paper-soft
           style={{

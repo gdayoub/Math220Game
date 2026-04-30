@@ -74,6 +74,15 @@ const MODES: Mode[] = [
     textColor: "var(--ink)",
     href: "/stats",
   },
+  {
+    slug: "review",
+    title: "Review",
+    glyph: "✎",
+    tagline: "Concepts, formulas, worked examples.",
+    color: "var(--mint)",
+    textColor: "var(--ink)",
+    href: "/review",
+  },
 ];
 
 export default function HomePage() {
@@ -87,11 +96,15 @@ export default function HomePage() {
 
 function HomeBody() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [daily, setDaily] = useState<{ completed: boolean; streak: number } | null>(null);
   const { selectedCharacter } = useClient();
   const character = getCharacter(selectedCharacter);
 
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then(setProfile);
+    fetch("/api/daily")
+      .then((r) => r.json())
+      .then((d) => setDaily({ completed: d.completed, streak: d.streak }));
   }, []);
 
   const accuracy =
@@ -173,6 +186,7 @@ function HomeBody() {
                     glyphSize={character.glyph.length > 1 ? 22 : 30}
                     size={70}
                     eyeColor={character.eyeColor ?? "var(--ink)"}
+                    characterId={character.id}
                   />
                 </span>
                 <div
@@ -258,6 +272,106 @@ function HomeBody() {
           </motion.div>
         </Link>
       </div>
+
+      {/* Daily challenge banner */}
+      {daily && (
+        <Link href="/daily" style={{ textDecoration: "none" }}>
+          <motion.div
+            initial={{ y: 12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+              delay: 0.05,
+              type: "spring",
+              stiffness: 300,
+              damping: 15,
+            }}
+            whileHover={{ y: -3, rotate: -1 }}
+            whileTap={{ y: 2, scale: 0.98 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 18,
+              padding: "16px 24px",
+              background: daily.completed ? "var(--mint)" : "var(--lemon)",
+              border: "4px solid var(--ink)",
+              borderRadius: 28,
+              boxShadow: "0 6px 0 0 var(--ink)",
+              marginBottom: 18,
+              cursor: "pointer",
+              flexWrap: "wrap",
+              rowGap: 8,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 800,
+                  fontSize: 32,
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                  border: "4px solid var(--ink)",
+                  borderRadius: 14,
+                  width: 52,
+                  height: 52,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 3px 0 0 var(--ink)",
+                  lineHeight: 1,
+                }}
+                data-glyph-chip
+              >
+                ✦
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 800,
+                    fontSize: 18,
+                    color: "var(--ink)",
+                  }}
+                >
+                  Daily Challenge
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "var(--ink)",
+                    opacity: 0.75,
+                  }}
+                >
+                  {daily.completed
+                    ? `Solved today · streak 🔥 ${daily.streak}`
+                    : `Open today's question · streak 🔥 ${daily.streak}`}
+                </span>
+              </div>
+            </div>
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 12,
+                color: "var(--ink)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                background: "var(--paper)",
+                border: "3px solid var(--ink)",
+                borderRadius: 999,
+                padding: "6px 14px",
+                boxShadow: "0 3px 0 0 var(--ink)",
+              }}
+              data-pill
+            >
+              {daily.completed ? "Done ✓" : "Play →"}
+            </span>
+          </motion.div>
+        </Link>
+      )}
 
       {/* Stats row */}
       <motion.div
@@ -360,6 +474,7 @@ function ModeTile({
   return (
     <Link href={finalHref} style={{ textDecoration: "none" }}>
       <motion.div
+        data-mode={mode.slug}
         initial={{ y: 20, opacity: 0, scale: 0.9 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{

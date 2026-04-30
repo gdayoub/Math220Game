@@ -2,6 +2,7 @@
 import { forwardRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import type { Question } from "@/lib/topics";
+import { MatrixGrid } from "./ui/MatrixGrid";
 
 type Props = {
   question: Question;
@@ -24,17 +25,29 @@ const inputBaseStyle: React.CSSProperties = {
   outline: "none",
 };
 
+function detectShape(answer: unknown): { rows: number; cols: number } | null {
+  if (Array.isArray(answer)) {
+    if (answer.length === 0) return null;
+    if (Array.isArray(answer[0])) {
+      const rows = answer.length;
+      const cols = (answer[0] as unknown[]).length;
+      if (rows > 0 && cols > 0) return { rows, cols };
+    } else {
+      return { rows: 1, cols: answer.length };
+    }
+  }
+  return null;
+}
+
 export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerInput(
   { question, disabled, onChange },
   ref,
 ) {
   const [scalar, setScalar] = useState("");
-  const [vector, setVector] = useState("");
   const [mc, setMc] = useState<string | null>(null);
 
   useEffect(() => {
     setScalar("");
-    setVector("");
     setMc(null);
   }, [question.id]);
 
@@ -65,23 +78,78 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
           style={inputBaseStyle}
         />
       );
-    case "vector":
+
+    case "vector": {
+      const shape = detectShape(question.answer);
+      if (shape) {
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 11,
+                color: "var(--ink-soft)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {shape.cols}-component vector — fill each cell, [Tab]/arrows to move
+            </span>
+            <MatrixGrid
+              rows={shape.rows}
+              cols={shape.cols}
+              resetKey={question.id}
+              onChange={onChange}
+            />
+          </div>
+        );
+      }
       return (
         <input
           ref={ref}
           autoFocus
           disabled={disabled}
-          value={vector}
-          onChange={(e) => {
-            setVector(e.target.value);
-            onChange(e.target.value);
-          }}
+          onChange={(e) => onChange(e.target.value)}
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder="comma separated (e.g. 1, -2, 3)"
           style={inputBaseStyle}
         />
       );
+    }
+
+    case "matrix": {
+      const shape = detectShape(question.answer);
+      if (shape) {
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 11,
+                color: "var(--ink-soft)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {shape.rows}×{shape.cols} matrix — fill each cell, arrows to move
+            </span>
+            <MatrixGrid
+              rows={shape.rows}
+              cols={shape.cols}
+              resetKey={question.id}
+              onChange={onChange}
+            />
+          </div>
+        );
+      }
+      return (
+        <div style={{ color: "var(--ink-soft)" }}>Matrix shape unknown.</div>
+      );
+    }
+
     case "multiple-choice":
       return (
         <div
@@ -136,6 +204,7 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
           })}
         </div>
       );
+
     case "boolean":
       return (
         <div style={{ display: "flex", gap: 12 }}>
@@ -180,6 +249,7 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
           })}
         </div>
       );
+
     default:
       return (
         <div style={{ color: "var(--ink-soft)" }}>Unsupported input type</div>
