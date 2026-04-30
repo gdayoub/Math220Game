@@ -66,6 +66,26 @@ function fmtBmat(m: number[][]): string {
   );
 }
 
+function multiply(A: number[][], B: number[][]): number[][] {
+  const m = A.length;
+  const n = B[0]?.length ?? 0;
+  const k = B.length;
+  const out: number[][] = [];
+  for (let i = 0; i < m; i++) {
+    const row: number[] = [];
+    for (let j = 0; j < n; j++) {
+      let s = 0;
+      for (let p = 0; p < k; p++) s += A[i][p] * B[p][j];
+      if (Math.abs(s) < 1e-9) s = 0;
+      else if (Math.abs(s - Math.round(s)) < 1e-7) s = Math.round(s);
+      else s = Number(s.toFixed(4));
+      row.push(s);
+    }
+    out.push(row);
+  }
+  return out;
+}
+
 function isIdentity(m: number[][], n: number): boolean {
   if (m.length !== n) return false;
   for (let i = 0; i < n; i++) {
@@ -310,6 +330,11 @@ export function RrefMode({ augmented, onChange, reducedMotion }: Props) {
           barCol={barCol}
           final={final}
           inverseResult={inverseResult}
+          originalA={
+            subMode === "inverse"
+              ? augmented.map((r) => r.slice(0, rows))
+              : null
+          }
         />
       </div>
 
@@ -518,12 +543,14 @@ function ResultPanel({
   barCol,
   final,
   inverseResult,
+  originalA,
 }: {
   subMode: SubMode;
   rows: number;
   barCol: number;
   final: number[][];
   inverseResult: { ok: true; inverse: number[][] } | { ok: false } | null;
+  originalA: number[][] | null;
 }) {
   if (subMode === "inverse" && inverseResult) {
     return (
@@ -535,22 +562,63 @@ function ResultPanel({
           borderRadius: 20,
           boxShadow: "0 5px 0 0 var(--ink)",
           padding: "14px 18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          minWidth: 0,
         }}
       >
         {inverseResult.ok ? (
-          <p
-            data-on-paper
-            style={{
-              fontFamily: "var(--font-body)",
-              fontSize: 16,
-              color: "var(--ink)",
-              lineHeight: 1.5,
-            }}
-          >
-            <Tex>
-              {`$A^{-1} = ${fmtBmat(inverseResult.inverse)}$`}
-            </Tex>
-          </p>
+          <>
+            <p
+              data-on-paper
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: 16,
+                color: "var(--ink)",
+                lineHeight: 1.5,
+                minWidth: 0,
+                maxWidth: "100%",
+              }}
+            >
+              <Tex>{`$A^{-1} = ${fmtBmat(inverseResult.inverse)}$`}</Tex>
+            </p>
+            {originalA && (() => {
+              const product = multiply(originalA, inverseResult.inverse);
+              const verified = isIdentity(product, rows);
+              return (
+                <div
+                  data-on-paper
+                  style={{
+                    background: verified ? "var(--mint)" : "var(--lemon)",
+                    border: "3px solid var(--ink)",
+                    borderRadius: 14,
+                    boxShadow: "0 3px 0 0 var(--ink)",
+                    padding: "10px 14px",
+                    fontFamily: "var(--font-body)",
+                    fontSize: 14,
+                    color: "var(--ink)",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 800,
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      marginRight: 6,
+                    }}
+                  >
+                    {verified ? "✓ Verified" : "Check"}
+                  </span>
+                  <Tex>{`$A \\cdot A^{-1} = ${fmtBmat(product)}$`}</Tex>
+                </div>
+              );
+            })()}
+          </>
         ) : (
           <p
             data-on-paper
