@@ -87,7 +87,7 @@ Generates 30 problems × 7 topics × 3 difficulties (= 630), verifies each canon
 ## Keyboard
 
 - `Enter` — submit / next
-- `1` / `2` / `3` — confidence sure / maybe / guess
+
 
 ## Future hooks (not yet wired)
 
