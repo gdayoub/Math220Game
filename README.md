@@ -28,6 +28,27 @@ Cost: $0/mo on Vercel Hobby + Upstash free tier (256 MB storage, 500 k
 commands/month). Rate-limited to 30 req / 10 sec per user on the write
 endpoints to stay safely under the 1 M function-invocation cap.
 
+### Database outages
+
+If Redis is unavailable, the game uses signed, httpOnly browser cookies for
+progress and today's challenge instead of hanging on the loading screen. Backups
+are also saved while Redis is healthy. Configure `PROFILE_COOKIE_SECRET` with a
+stable random server-only secret for deployments without Redis; existing Redis
+deployments can use their configured REST token as the signing key. Both
+`KV_REST_API_*` and `UPSTASH_REDIS_REST_*` variable names are supported.
+
+Browser backup history retains up to 10 recent mistakes (fewer for large
+questions) and up to 30 review items to fit cookie limits. Redis keeps its full
+200-entry history. Clearing browser cookies clears the backup. When Redis
+recovers, newer browser progress is kept and saved on the next answer. Rate
+limiting during an outage is best effort within each function instance.
+
+Regression check against a running server (including a Redis outage):
+
+```bash
+node scripts/smoke-game.mjs http://localhost:3000
+```
+
 ## Modes
 
 - **Survival** — 3 lives, difficulty climbs over time, time pressure

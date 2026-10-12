@@ -100,6 +100,7 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
               rows={shape.rows}
               cols={shape.cols}
               resetKey={question.id}
+              disabled={disabled}
               onChange={onChange}
             />
           </div>
@@ -140,6 +141,7 @@ export const AnswerInput = forwardRef<HTMLInputElement, Props>(function AnswerIn
               rows={shape.rows}
               cols={shape.cols}
               resetKey={question.id}
+              disabled={disabled}
               onChange={onChange}
             />
           </div>

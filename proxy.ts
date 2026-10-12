@@ -6,7 +6,8 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 /**
  * Anonymous identity: every visitor gets a UUID stored in an httpOnly cookie.
  * No login screen, no signup. Each browser / device = an isolated profile.
- * Runs only on /api/* (matcher below) so static asset requests are untouched.
+ * Establish identity on page entry, before concurrent API requests start.
+ * Static asset requests are untouched.
  */
 export function proxy(req: NextRequest) {
   const existing = req.cookies.get(COOKIE_NAME)?.value;
@@ -37,5 +38,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/", "/api/:path*", "/play/:path*", "/boss", "/daily", "/select", "/stats", "/settings", "/review/:path*", "/viz"],
 };

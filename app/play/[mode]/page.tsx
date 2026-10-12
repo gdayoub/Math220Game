@@ -19,6 +19,7 @@ import type { Question, Confidence } from "@/lib/topics";
 import type { Profile } from "@/lib/profile";
 import { useClient } from "@/lib/clientStore";
 import { getCharacter } from "@/lib/characters";
+import { requestJson } from "@/lib/request";
 
 type Mode = "survival" | "weakness" | "speed" | "boss" | "viz";
 
@@ -75,87 +76,106 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [gameOver, setGameOver] = useState<null | "won" | "lost">(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const submitPending = useRef(false);
+  const questionPending = useRef(false);
   const [confetti, setConfetti] = useState(false);
   const [topicMissStreak, setTopicMissStreak] = useState<{ topic: Topic; count: number } | null>(null);
   const [nudgeTopic, setNudgeTopic] = useState<Topic | null>(null);
   const [nudgeDismissedFor, setNudgeDismissedFor] = useState<Topic | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
-
-  useEffect(() => {
-    fetch("/api/profile").then((r) => r.json()).then(setProfile);
-    void fetchNext(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const startTimeRef = useRef<number>(0);
 
   const fetchNext = useCallback(
     async (idx: number) => {
+      if (questionPending.current) return;
+      questionPending.current = true;
       setLoading(true);
+      setLoadError(null);
+      setSubmitError(null);
       setFeedback(null);
       setShowSolution(false);
       setUserAnswer("");
       setConfidence("maybe");
-      const res = await fetch("/api/question", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          bossTopic,
-          questionsAnsweredInRun: idx,
-        }),
-      });
-      const data = await res.json();
-      setQuestion(data.question);
-      startTimeRef.current = Date.now();
-      setLoading(false);
+      try {
+        const data = await requestJson<{ question: Question }>("/api/question", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            mode,
+            bossTopic,
+            questionsAnsweredInRun: idx,
+          }),
+        });
+        if (!data.question?.id) throw new Error("The question couldn't load. Please try again.");
+        setQuestion(data.question);
+        startTimeRef.current = Date.now();
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : "The question couldn't load. Please try again.");
+      } finally {
+        questionPending.current = false;
+        setLoading(false);
+      }
     },
     [mode, bossTopic],
   );
 
-  const submit = useCallback(async () => {
-    if (!question || feedback) return;
-    const timeSec = (Date.now() - startTimeRef.current) / 1000;
-    const res = await fetch("/api/evaluate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        question,
-        userAnswer,
-        timeSec,
-        confidence,
-        streak,
-        characterId: selectedCharacter,
-      }),
-    });
-    const data: {
-      correct: boolean;
-      xpDelta: number;
-      profile: Profile;
-    } = await res.json();
-    setProfile(data.profile);
-    setFeedback({ correct: data.correct, xpDelta: data.xpDelta });
-    if (data.correct) {
-      setStreak((s) => s + 1);
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 2000);
-      // Reset same-topic miss streak on a correct answer
-      setTopicMissStreak(null);
-    } else {
-      setStreak(0);
-      setShowSolution(true);
-      if (cfg.lives !== null) {
-        const newLives = lives - 1;
-        setLives(newLives);
-        if (newLives <= 0) setGameOver("lost");
+  useEffect(() => {
+    // Establish the anonymous cookie before loading a question on a fresh visit.
+    void requestJson<Profile>("/api/profile").then(setProfile).catch(() => {}).finally(() => fetchNext(0));
+  }, [fetchNext]);
+
+  const submit = useCallback(async (expired = false) => {
+    if (!question || feedback || loading || loadError || submitPending.current) return;
+    submitPending.current = true;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const timeSec = (Date.now() - startTimeRef.current) / 1000;
+      const data = await requestJson<{ correct: boolean; xpDelta: number; profile: Profile }>("/api/evaluate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          question,
+          userAnswer: expired ? "" : userAnswer,
+          timeSec: expired ? question.timeLimitSec : timeSec,
+          confidence,
+          streak,
+          characterId: selectedCharacter,
+        }),
+      });
+      setProfile(data.profile);
+      setFeedback({ correct: data.correct, xpDelta: data.xpDelta });
+      if (data.correct) {
+        setStreak((s) => s + 1);
+        setConfetti(true);
+        setTimeout(() => setConfetti(false), 2000);
+        // Reset same-topic miss streak on a correct answer
+        setTopicMissStreak(null);
+      } else {
+        setStreak(0);
+        setShowSolution(true);
+        if (cfg.lives !== null) {
+          const newLives = lives - 1;
+          setLives(newLives);
+          if (newLives <= 0) setGameOver("lost");
+        }
+        // Track consecutive misses on the same topic
+        const next =
+          topicMissStreak && topicMissStreak.topic === question.topic
+            ? { topic: question.topic, count: topicMissStreak.count + 1 }
+            : { topic: question.topic, count: 1 };
+        setTopicMissStreak(next);
+        if (next.count >= 3 && nudgeDismissedFor !== next.topic) {
+          setNudgeTopic(next.topic);
+        }
       }
-      // Track consecutive misses on the same topic
-      const next =
-        topicMissStreak && topicMissStreak.topic === question.topic
-          ? { topic: question.topic, count: topicMissStreak.count + 1 }
-          : { topic: question.topic, count: 1 };
-      setTopicMissStreak(next);
-      if (next.count >= 3 && nudgeDismissedFor !== next.topic) {
-        setNudgeTopic(next.topic);
-      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Your answer couldn't be submitted. Please try again.");
+    } finally {
+      submitPending.current = false;
+      setSubmitting(false);
     }
   }, [
     question,
@@ -168,10 +188,12 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
     selectedCharacter,
     topicMissStreak,
     nudgeDismissedFor,
+    loading,
+    loadError,
   ]);
 
   const advance = useCallback(() => {
-    if (gameOver) return;
+    if (gameOver || questionPending.current) return;
     const next = questionIndex + 1;
     if (cfg.total !== null && next >= cfg.total) {
       setGameOver("won");
@@ -181,34 +203,7 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
     void fetchNext(next);
   }, [questionIndex, cfg.total, gameOver, fetchNext]);
 
-  const handleExpire = useCallback(async () => {
-    if (!question || feedback) return;
-    const res = await fetch("/api/evaluate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        question,
-        userAnswer: "",
-        timeSec: question.timeLimitSec,
-        confidence,
-        streak,
-      }),
-    });
-    const data: {
-      correct: boolean;
-      xpDelta: number;
-      profile: Profile;
-    } = await res.json();
-    setProfile(data.profile);
-    setFeedback({ correct: false, xpDelta: data.xpDelta });
-    setShowSolution(true);
-    setStreak(0);
-    if (cfg.lives !== null) {
-      const newLives = lives - 1;
-      setLives(newLives);
-      if (newLives <= 0) setGameOver("lost");
-    }
-  }, [question, feedback, confidence, streak, lives, cfg.lives]);
+  const handleExpire = useCallback(() => submit(true), [submit]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -300,7 +295,7 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
             totalSec={Math.round(
               question.timeLimitSec * (character?.timeMultiplier ?? 1),
             )}
-            active={!feedback && !loading}
+            active={!feedback && !loading && !loadError && !submitting && !submitError}
             resetKey={question.id}
             onExpire={handleExpire}
           />
@@ -316,7 +311,12 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
       />
 
       <main style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        {loading || !question ? (
+        {loadError ? (
+          <div role="alert" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <p>{loadError}</p>
+            <ChunkyButton onClick={() => void fetchNext(questionIndex)}>Retry question</ChunkyButton>
+          </div>
+        ) : loading || !question ? (
           <motion.div
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.4, repeat: Infinity }}
@@ -342,7 +342,8 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
 
             {!feedback ? (
               <>
-                <AnswerInput question={question} onChange={setUserAnswer} />
+                <AnswerInput question={question} disabled={submitting} onChange={setUserAnswer} />
+                {submitError && <p role="alert">{submitError}</p>}
                 <div
                   style={{
                     display: "flex",
@@ -356,8 +357,8 @@ function PlayInner({ params }: { params: Promise<{ mode: string }> }) {
                     value={confidence}
                     onChange={setConfidence}
                   />
-                  <ChunkyButton color="var(--lemon)" onClick={submit}>
-                    Submit ⏎
+                  <ChunkyButton color="var(--lemon)" disabled={submitting} onClick={() => void submit()}>
+                    {submitting ? "Submitting…" : "Submit ⏎"}
                   </ChunkyButton>
                 </div>
                 <div

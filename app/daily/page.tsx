@@ -12,6 +12,7 @@ import { AnswerInput } from "@/components/AnswerInput";
 import { Confetti } from "@/components/ui/Confetti";
 import { ThemePicker } from "@/components/ui/ThemePicker";
 import { PaperHint } from "@/components/ui/PaperHint";
+import { requestJson } from "@/lib/request";
 
 type DailyState = {
   question: Question | null;
@@ -31,39 +32,55 @@ export default function DailyPage() {
   } | null>(null);
   const [showSolution, setShowSolution] = useState(false);
   const [confetti, setConfetti] = useState(false);
-  const startTimeRef = useRef<number>(Date.now());
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const submitPending = useRef(false);
+  const startTimeRef = useRef<number>(0);
 
-  useEffect(() => {
-    fetch("/api/daily")
-      .then((r) => r.json())
+  const loadDaily = useCallback(() => {
+    return requestJson<DailyState>("/api/daily")
       .then((d) => {
+        setLoadError(null);
         setState(d);
         if (d.completed) setShowSolution(true);
         startTimeRef.current = Date.now();
-      });
+      }).catch((error) => setLoadError(error instanceof Error ? error.message : "Today's challenge couldn't load. Please try again."));
   }, []);
 
+  useEffect(() => {
+    void loadDaily();
+  }, [loadDaily]);
+
   const submit = useCallback(async () => {
-    if (!state?.question || feedback || state.completed) return;
-    const timeSec = (Date.now() - startTimeRef.current) / 1000;
-    const res = await fetch("/api/daily", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        userAnswer,
-        timeSec,
-        confidence,
-        characterId: selectedCharacter,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) return;
-    setFeedback({ correct: data.correct, xpDelta: data.xpDelta, bonus: data.bonus });
-    setShowSolution(true);
-    setState((s) => (s ? { ...s, completed: data.correct, streak: data.streak } : s));
-    if (data.correct) {
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 2200);
+    if (!state?.question || feedback || state.completed || submitPending.current) return;
+    submitPending.current = true;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const timeSec = (Date.now() - startTimeRef.current) / 1000;
+      const data = await requestJson<{ correct: boolean; xpDelta: number; bonus: number; streak: number }>("/api/daily", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          userAnswer,
+          timeSec,
+          confidence,
+          characterId: selectedCharacter,
+        }),
+      });
+      setFeedback({ correct: data.correct, xpDelta: data.xpDelta, bonus: data.bonus });
+      setShowSolution(true);
+      setState((s) => (s ? { ...s, completed: data.correct, streak: data.streak } : s));
+      if (data.correct) {
+        setConfetti(true);
+        setTimeout(() => setConfetti(false), 2200);
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Your answer couldn't be submitted. Please try again.");
+    } finally {
+      submitPending.current = false;
+      setSubmitting(false);
     }
   }, [state, feedback, userAnswer, confidence, selectedCharacter]);
 
@@ -120,7 +137,12 @@ export default function DailyPage() {
           </div>
         </div>
 
-        {state?.question ? (
+        {loadError ? (
+          <div role="alert">
+            <p>{loadError}</p>
+            <ChunkyButton onClick={() => { setLoadError(null); void loadDaily(); }}>Retry challenge</ChunkyButton>
+          </div>
+        ) : state?.question ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <QuestionCard
               question={state.question}
@@ -130,7 +152,8 @@ export default function DailyPage() {
 
             {!feedback && !state.completed && (
               <>
-                <AnswerInput question={state.question} onChange={setUserAnswer} />
+                <AnswerInput question={state.question} disabled={submitting} onChange={setUserAnswer} />
+                {submitError && <p role="alert">{submitError}</p>}
                 <div
                   style={{
                     display: "flex",
@@ -141,8 +164,8 @@ export default function DailyPage() {
                   }}
                 >
                   <ConfidencePicker value={confidence} onChange={setConfidence} />
-                  <ChunkyButton color="var(--lemon)" onClick={submit}>
-                    Submit ⏎
+                  <ChunkyButton color="var(--lemon)" disabled={submitting} onClick={submit}>
+                    {submitting ? "Submitting…" : "Submit ⏎"}
                   </ChunkyButton>
                 </div>
                 <div
@@ -286,7 +309,7 @@ export default function DailyPage() {
               padding: "20px 0",
             }}
           >
-            Loading today's challenge…
+                  Loading today&apos;s challenge…
           </div>
         )}
       </ScreenShell>

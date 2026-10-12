@@ -8,19 +8,22 @@ type Props = {
   onChange: (value: unknown) => void;
   /** When the question id changes, cells reset. */
   resetKey: string | number;
+  disabled?: boolean;
 };
 
-export function MatrixGrid({ rows, cols, onChange, resetKey }: Props) {
+export function MatrixGrid({ rows, cols, onChange, resetKey, disabled }: Props) {
+  return <MatrixCells key={`${resetKey}:${rows}:${cols}`} rows={rows} cols={cols} onChange={onChange} disabled={disabled} />;
+}
+
+function MatrixCells({ rows, cols, onChange, disabled }: Omit<Props, "resetKey">) {
   const total = rows * cols;
   const [cells, setCells] = useState<string[]>(() => Array(total).fill(""));
   const refs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
-    setCells(Array(total).fill(""));
-    refs.current = [];
-    setTimeout(() => refs.current[0]?.focus(), 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetKey, total]);
+    const focusTimeout = setTimeout(() => refs.current[0]?.focus(), 0);
+    return () => clearTimeout(focusTimeout);
+  }, []);
 
   function set(i: number, v: string) {
     const next = cells.slice();
@@ -77,6 +80,8 @@ export function MatrixGrid({ rows, cols, onChange, resetKey }: Props) {
               refs.current[i] = el;
             }}
             type="text"
+            disabled={disabled}
+            aria-label={`Row ${Math.floor(i / cols) + 1}, column ${i % cols + 1}`}
             inputMode="numeric"
             value={v}
             onChange={(e) => set(i, e.target.value)}

@@ -3,20 +3,40 @@ import path from "node:path";
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
 import { backfillProfile, emptyProfile, type HistoryEntry, type Profile } from "./profile";
+import { readProfileBackup, writeProfileBackup, readHistoryBackup, writeHistoryBackup } from "./browserBackup";
 
 const HISTORY_CAP = 200;
 
 /** True when running on Vercel (or anywhere) with Upstash REST credentials configured. */
 function hasRedis(): boolean {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return !!((process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL) && (process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN));
+}
+
+function hasBrowserBackup(): boolean {
+  return hasRedis() || process.env.VERCEL === "1" || !!process.env.PROFILE_COOKIE_SECRET;
+}
+
+let redisUnavailableUntil = 0;
+async function tryRedis<T>(operation: () => Promise<T>): Promise<T | null> {
+  if (!hasRedis() || Date.now() < redisUnavailableUntil) return null;
+  try {
+    return await operation();
+  } catch {
+    // A deleted/paused database must not prevent questions or grading.
+    redisUnavailableUntil = Date.now() + 60_000;
+    console.warn("Redis unavailable; using signed browser progress backups for 60 seconds.");
+    return null;
+  }
 }
 
 let _redis: Redis | null = null;
 function redis(): Redis {
   if (!_redis) {
     _redis = new Redis({
-      url: process.env.KV_REST_API_URL!,
-      token: process.env.KV_REST_API_TOKEN!,
+      url: (process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL)!,
+      token: (process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN)!,
+      retry: false,
+      signal: () => AbortSignal.timeout(1500),
     });
   }
   return _redis;
@@ -83,7 +103,9 @@ async function fsReadHistory(): Promise<HistoryEntry[]> {
 async function kvReadBlob(uid: string): Promise<UserBlob> {
   const blob = await redis().get<UserBlob>(userKey(uid));
   if (!blob) {
-    return { profile: emptyProfile(), history: [] };
+    const profile = emptyProfile();
+    profile.updatedAt = 0;
+    return { profile, history: [] };
   }
   return { profile: backfillProfile(blob.profile), history: blob.history ?? [] };
 }
@@ -96,37 +118,50 @@ async function kvWriteBlob(uid: string, blob: UserBlob): Promise<void> {
 // ---------- Public API ----------
 
 export async function getProfile(uid: string): Promise<Profile> {
-  if (hasRedis()) {
-    return (await kvReadBlob(uid)).profile;
-  }
-  return fsReadProfile();
+  if (!hasBrowserBackup()) return fsReadProfile();
+  const backup = await readProfileBackup(uid);
+  const blob = await tryRedis(() => kvReadBlob(uid));
+  // Keep progress earned during an outage when Redis comes back online.
+  const profile = backup && (!blob || backup.updatedAt > blob.profile.updatedAt)
+    ? backfillProfile(backup) : blob?.profile ?? emptyProfile();
+  await writeProfileBackup(uid, profile);
+  return profile;
 }
 
 export async function saveProfile(uid: string, p: Profile): Promise<void> {
-  if (hasRedis()) {
+  if (!hasBrowserBackup()) return fsWriteProfile(p);
+  p.updatedAt = Date.now();
+  await writeProfileBackup(uid, p);
+  await tryRedis(async () => {
     const blob = await kvReadBlob(uid);
     blob.profile = p;
     await kvWriteBlob(uid, blob);
-    return;
-  }
-  await fsWriteProfile(p);
+    return true;
+  });
 }
 
 export async function getHistory(uid: string): Promise<HistoryEntry[]> {
-  if (hasRedis()) {
-    return (await kvReadBlob(uid)).history;
-  }
-  return fsReadHistory();
+  if (!hasBrowserBackup()) return fsReadHistory();
+  const backup = await readHistoryBackup(uid) ?? [];
+  const blob = await tryRedis(() => kvReadBlob(uid));
+  return mergeHistory(backup, blob?.history ?? []);
 }
 
 export async function appendHistory(uid: string, entry: HistoryEntry): Promise<void> {
-  if (hasRedis()) {
+  if (!hasBrowserBackup()) return fsAppendHistory(entry);
+  const history = mergeHistory([entry], await getHistory(uid));
+  await writeHistoryBackup(uid, history);
+  await tryRedis(async () => {
     const blob = await kvReadBlob(uid);
-    blob.history = [entry, ...blob.history].slice(0, HISTORY_CAP);
+    blob.history = mergeHistory(history, blob.history);
     await kvWriteBlob(uid, blob);
-    return;
-  }
-  await fsAppendHistory(entry);
+    return true;
+  });
+}
+
+function mergeHistory(a: HistoryEntry[], b: HistoryEntry[]): HistoryEntry[] {
+  return [...new Map([...a, ...b].map((entry) => [`${entry.questionId}:${entry.ts}`, entry])).values()]
+    .sort((a, b) => b.ts - a.ts).slice(0, HISTORY_CAP);
 }
 
 // ---------- Rate limiting ----------
@@ -138,7 +173,7 @@ let _limiter: Ratelimit | null = null;
  * configured; returns null in dev (no limit). Call `limiter.limit(uid)` and
  * check `success` in the API route.
  */
-export function getRateLimiter(): Ratelimit | null {
+function redisRateLimiter(): Ratelimit | null {
   if (!hasRedis()) return null;
   if (!_limiter) {
     _limiter = new Ratelimit({
@@ -149,4 +184,25 @@ export function getRateLimiter(): Ratelimit | null {
     });
   }
   return _limiter;
+}
+
+const localRequests = new Map<string, { count: number; reset: number }>();
+export function getRateLimiter() {
+  if (!hasBrowserBackup()) return null;
+  return {
+    async limit(key: string): Promise<{ success: boolean }> {
+      const result = await tryRedis(async () => redisRateLimiter()!.limit(key));
+      if (result) return result;
+      // Best-effort protection during outages; bounded per-function memory.
+      const now = Date.now();
+      for (const [uid, window] of localRequests) {
+        if (window.reset <= now) localRequests.delete(uid);
+      }
+      if (localRequests.size >= 10000 && !localRequests.has(key)) return { success: false };
+      const window = localRequests.get(key) ?? { count: 0, reset: now + 10000 };
+      window.count += 1;
+      localRequests.set(key, window);
+      return { success: window.count <= 30 };
+    },
+  };
 }
